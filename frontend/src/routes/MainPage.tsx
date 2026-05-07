@@ -5,7 +5,9 @@ import { Header } from '@/components/layout/Header';
 import { FilterChips } from '@/components/post/FilterChips';
 import { PostList } from '@/components/post/PostList';
 import { Fab } from '@/components/post/Fab';
-import { RequestModal } from '@/components/modals/RequestModal';
+import { RequestModal, type RequestPrefill } from '@/components/modals/RequestModal';
+import { NewPostBanner } from '@/components/nudge/NewPostBanner';
+import { NudgeBanner } from '@/components/nudge/NudgeBanner';
 import { ApiError } from '@/lib/api';
 
 /**
@@ -18,6 +20,20 @@ export function MainPage() {
   const [filterMine, setFilterMine] = useState(false);
   const [filterLent, setFilterLent] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [modalPrefill, setModalPrefill] = useState<RequestPrefill | null>(null);
+
+  const openBlankModal = () => {
+    setModalPrefill(null);
+    setShowModal(true);
+  };
+  const openPrefilledModal = (item: RequestPrefill) => {
+    setModalPrefill(item);
+    setShowModal(true);
+  };
+  const closeModal = () => {
+    setShowModal(false);
+    setModalPrefill(null);
+  };
 
   const requestsQuery = useRequests({
     mine: filterMine || undefined,
@@ -45,8 +61,8 @@ export function MainPage() {
     <div className="flex flex-1 flex-col">
       <Header user={user} />
 
-      {/* M5: <NewPostBanner /> 자리 */}
-      {/* M5: <NudgeBanner /> 자리 */}
+      <NewPostBanner items={items} currentUserId={user.id} />
+      <NudgeBanner onPick={openPrefilledModal} />
 
       <div className="flex flex-1 flex-col gap-4 px-4 pb-28 pt-4">
         <FilterChips
@@ -78,8 +94,8 @@ export function MainPage() {
         )}
       </div>
 
-      <Fab onClick={() => setShowModal(true)} />
-      <RequestModal open={showModal} onClose={() => setShowModal(false)} />
+      <Fab onClick={openBlankModal} />
+      <RequestModal open={showModal} onClose={closeModal} prefill={modalPrefill} />
     </div>
   );
 }
