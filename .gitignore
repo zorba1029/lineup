@@ -15,8 +15,5 @@ Thumbs.db
 .vscode/
 *.swp
 
-# Claude Code 로컬 설정 (개인)
-.claude/
-
 # 임시/스크래치
 무제.pdf
