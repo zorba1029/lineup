@@ -65,12 +65,12 @@ impl/
 - [x] **M2** Auth — argon2/JWT/AuthUser extractor, signup/login/refresh/logout/me, 라우트 가드 (TDD 21 tests)
 - [x] **M3** 게시글 CRUD + 메인 화면 — `/api/v1/requests/*` 5엔드포인트, (dong, line_no) 격리, 72h 만료 백그라운드 task, MainPage(Header/FilterChips/Fab) + RequestDetailPage
 - [x] **M4** Offer 플로우 — `/api/v1/{requests/:id/offers, offers/*}` 6엔드포인트 + accept 트랜잭션, OfferBottomSheet(2-step), MyOfferModal, MatchedPage(양 당사자 phone 노출), OfferRegisteredPage
-- [ ] **M5** Polling, 1초 카운트다운, NewPostBanner, NudgeBanner
-- [ ] **M6** 마감 (시드, 운영 Dockerfile, GitHub Actions CI, README 정리)
+- [x] **M5** Polling, 1초 카운트다운, NewPostBanner, NudgeBanner — TanStack `refetchInterval`(메인 5s, 상세 1s + status 의존 자동 중단), 1시간 미만 `text-accent` 강조, lastSeen localStorage 기반 derived 카운트, 정적 풀 + RequestModal 프리필
+- [ ] **M6** 마감 (시드, 운영 Dockerfile, GitHub Actions CI, sqlx 통합 테스트, README 정리)
 
 진행 기록은 [`dev-log.md`](./dev-log.md), 종합 플랜은 [`PLAN.md`](./PLAN.md) §9 참조.
 
-검증 현황: `cargo test` 30/30 / `cargo clippy -D warnings` clean / `pnpm typecheck` & `pnpm build` clean.
+검증 현황: `cargo test` 30/30 / `cargo clippy -D warnings` clean / `pnpm typecheck` & `pnpm build` clean (151 modules, gzip 102KB).
 
 ## Repository
 

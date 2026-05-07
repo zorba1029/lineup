@@ -30,7 +30,7 @@
 | DB       | MySQL 8 (Docker) |
 | 빌드     | pnpm (FE), cargo (BE) |
 
-## 4. 디렉토리 (현재 = M4 완료, 다음 = M5)
+## 4. 디렉토리 (현재 = M5 완료, 다음 = M6)
 
 ```
 impl/
@@ -77,8 +77,9 @@ impl/
         │   ├── layout/{MobileShell,Header}    # ✅ M1/M3
         │   ├── modals/{Confirm,Request,MyOffer}# ✅ M3~M4
         │   ├── post/{PostCard,PostList,FilterChips,Fab,StatusBadge} # ✅ M3
+        │   ├── nudge/{NewPostBanner,NudgeBanner}  # ✅ M5
         │   ├── sheets/OfferBottomSheet.tsx    # ✅ M4 (2-step)
-        │   └── timer/CountdownTimer.tsx       # M5에서 1초 갱신으로 교체 (현재 stub)
+        │   └── timer/CountdownTimer.tsx       # ✅ M5 (1초 갱신, 1시간 미만 강조)
         ├── routes/                             # ✅ 7개 모두 구현됨
         ├── features/
         │   ├── auth/{useLogin,useSignup,useMe,useLogout}     # ✅ M2
@@ -89,6 +90,8 @@ impl/
             ├── auth.ts         # Zustand persist store
             ├── categories.ts   # CATEGORIES 상수
             ├── confirm.ts      # 전역 confirm slot
+            ├── lastSeen.ts     # ✅ M5 — localStorage NewPostBanner용
+            ├── nudgePool.ts    # ✅ M5 — 정적 추천 풀 12건
             ├── queryKeys.ts
             ├── time.ts         # formatRelative / formatRemaining
             ├── types.ts        # User, RequestPublic, OfferPublic, ...
@@ -170,28 +173,28 @@ curl http://localhost:8080/readyz     # → ready (DB 연결 정상)
 | 이웃 격리 우회 | 모든 쿼리 `WHERE u.dong = ? AND u.line_no = ?` 강제 |
 | 모바일 100vh 버그 | `min-h-dvh` + safe-area-inset (이미 적용) |
 
-## 8. 다음 작업 ─ M5 Polling / 타이머 / 배너 (예상 1~2일)
+## 8. 다음 작업 ─ M6 마감 (예상 2일)
 
-PLAN.md §9 M5 그대로:
-
-### 프론트엔드
-1. `lib/api.ts` 사용자 — TanStack Query에 `refetchInterval`. 메인은 5초, RequestDetailPage는 1초로 좁힘.
-2. `components/timer/CountdownTimer.tsx` — 현재 정적 stub을 `setInterval(1000)`로 교체. 1시간 미만 시 `urgent` 강조 클래스(빨간 색 또는 `text-accent`).
-3. `components/nudge/NewPostBanner.tsx` (신규) — 「마지막으로 본 시각」을 localStorage에 저장하고, `GET /requests?since=...`로 미열람 N건 표시. 닫기 → 세션 동안 비표시.
-4. `components/nudge/NudgeBanner.tsx` (신규) — 카테고리/이웃별 추천 1건. MVP에서는 가장 최근 open request 1건을 추천하는 정도로 단순화 가능.
-5. `MainPage.tsx`에서 두 배너 마운트 (이미 자리는 코멘트로 비워 둠).
+PLAN.md §9 M6:
 
 ### 백엔드
-- `GET /requests?since=ISO8601`은 이미 구현됨. 추가 작업 없음.
-- 필요 시 `GET /me/notifications/summary` 신규 엔드포인트 (PLAN.md §5.4) — `{ unseenRequestCount, pendingOfferCount, matchedToday }`. M5 범위지만 FE가 since 쿼리만으로 충분히 동작하면 미루기.
+1. **시드 데이터** — `migrations/0002_seed.sql` 또는 `bin/seed.rs`. 사용자 4명(101동 01라인 hong/kim/lee/park) + 카테고리별 샘플 글 3~5건. 비밀번호는 argon2 미리 해시한 값 박아두거나 시드 바이너리에서 동적 생성.
+2. **`#[sqlx::test]` 통합 테스트** (보류 task #6) — signup→login→me 라운드트립, 중복 username 409, request CRUD 격리, offer accept 트랜잭션 동시성. CI에서 MySQL service container로 실행.
+3. **운영 Dockerfile** — multi-stage build, distroless 또는 `gcr.io/distroless/cc-debian12` 베이스. `cargo sqlx prepare`로 오프라인 SQL 캐시 후 빌드.
 
-### 데모 가능 상태
-- 메인을 두고 다른 브라우저에서 글 작성 → 5초 내 자동 표시
-- 카운트다운이 실시간으로 줄어들고, 1시간 미만이 되면 빨간색으로 강조
+### 프론트엔드
+1. **운영 Dockerfile** — `pnpm build` → `dist/` → nginx static. SPA fallback (`try_files $uri /index.html`).
+2. **toast/snackbar** (옵션) — 현재는 인라인 에러만. polish.
 
-## 9. M6 한눈에
+### 인프라
+1. **GitHub Actions CI** — `.github/workflows/ci.yml`:
+   - BE: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`(MySQL service)
+   - FE: `pnpm typecheck`, `pnpm build`
+   - PR + main push 트리거
+2. **README 마감** — 배포 절차, env 변수 정리, 데모 URL/스크린샷 (있으면).
 
-- **M6** 마감 — 시드 데이터(`cargo run --bin seed` 또는 SQL 마이그레이션), 운영 Dockerfile(FE → nginx static, BE → distroless), GitHub Actions CI(`cargo test`, `cargo sqlx prepare`, `pnpm build`), README 정리, sqlx::test 통합 테스트(현재 task로 보류 중).
+### 워크플로
+M5부터 적용된 패턴 유지: `feat/m6-final` branch → 검증 → `--no-ff` merge.
 
 ## 10. 메모
 
@@ -203,4 +206,4 @@ PLAN.md §9 M5 그대로:
 
 ---
 
-이 컨텍스트를 바탕으로 곧장 M5 작업에 들어갈 수 있다. 막히면 PLAN.md의 해당 절을 펴고, 진행 흐름 복기는 `dev-log.md`를 참조.
+이 컨텍스트를 바탕으로 곧장 M6 작업에 들어갈 수 있다. 막히면 PLAN.md의 해당 절을 펴고, 진행 흐름 복기는 `dev-log.md`를 참조.

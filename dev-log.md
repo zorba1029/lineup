@@ -332,6 +332,66 @@ phone 노출 매트릭스:
 
 ---
 
+## M5. Polling / 카운트다운 / 배너
+
+목표 (PLAN.md §9 M5): 다른 사람이 글을 쓰면 5초 내 자동 표시, 카운트다운 실시간 갱신, 새 글/Nudge 배너로 발견성 향상.
+
+작업은 모두 프론트엔드 — 백엔드는 추가 작업 없음. 메인 세션에서 직접 작업 (서브에이전트 위임 X — 4건 합쳐 ~250 LoC, 단일 stack 변경이라 직접이 빠름).
+
+이 마일스톤부터 워크플로 변경: `feat/m5-polling-banners` branch에서 작업 → 사용자 검증 → `--no-ff`로 main에 merge. main은 검증된 코드만 유지.
+
+### 1) `CountdownTimer` 1초 갱신 (M5-1)
+`src/components/timer/CountdownTimer.tsx` — M3 정적 stub을 인터벌 기반으로 교체.
+- `useState(new Date()) + useEffect setInterval(1000)` + cleanup
+- 만료 시점이 지나면 setInterval 자체를 정리 → 무용한 tick 방지
+- `remainingMs < 1시간`일 때 `text-accent font-bold` 강조 (PLAN §1 urgent)
+
+### 2) TanStack `refetchInterval` (M5-2)
+- `useRequests`: 5초 polling, `refetchIntervalInBackground=false` (탭 백그라운드일 때 중단)
+- `useRequest`: 1초 polling. **상태 의존 동적 인터벌**:
+  ```ts
+  refetchInterval: (query) => {
+    const status = query.state.data?.request.status;
+    if (status && status !== 'open') return false;  // matched/expired/cancelled은 자동 중단
+    return 1000;
+  }
+  ```
+
+### 3) `NewPostBanner` — 미열람 N건 (M5-3)
+- `src/lib/lastSeen.ts` — localStorage `linenb-last-seen`에 ms epoch. 첫 방문 시 NOW로 초기화 (옛 글이 "새 글"로 안 잡히도록). 다른 탭과 storage 이벤트로 동기화.
+- `src/components/nudge/NewPostBanner.tsx` — derived count:
+  ```ts
+  items.filter(it => it.author.id !== currentUserId && created > lastSeen).length
+  ```
+  별도 fetch 없이 메인의 `useRequests` 결과 + polling과 자동 동기화. 닫기(✕) → `lastSeen = now` → 카운트 0 → null 반환으로 자동 제거.
+
+### 4) `NudgeBanner` — 정적 추천 + RequestModal 프리필 (M5-4)
+- `src/lib/nudgePool.ts` — 12건 정적 풀 (PLAN §3 시드 카테고리 분배)
+- `src/components/nudge/NudgeBanner.tsx` — `useMemo([])`로 mount 시 랜덤 1건 lock, 클릭 시 부모 콜백
+- `RequestModal`에 `prefill?: { name?, category?, description? }` prop 추가. open && prefill 변화 시 `reset({...defaults, ...prefill})`.
+- PLAN의 "자동 등록" 대신 사용자 확인 단계 보존 — 잘못 누름 방지가 더 중요한 UX.
+
+### 결정 사항
+- **폼 프리필 vs 즉시 POST**: PLAN.md는 자동 등록을 명시하지만 RequestModal 프리필 채택. 잘못된 요청 1건이라도 노이즈가 크고, 같은 라인 이웃 모두에게 알림이 가는 구조라 신중한 게 맞음.
+- **NewPostBanner는 derived state**: 별도 `?since=` 쿼리 대신 기존 list query에서 계산. 1 fetch 줄이고 polling과 자동 정합. 단점: 페이지 진입 시점 vs lastSeen이 가까우면 N=0이라 배너 안 뜸 (의도 — "방금 본 거 알지" 휴리스틱).
+- **상태 의존 polling**: matched/expired/cancelled 글은 polling 자동 중단. 비활성 글에 1초마다 GET 보낼 이유 없음.
+
+### M5 검증
+- `pnpm typecheck`: 0 errors
+- `pnpm build`: 151 modules, 347KB JS / gzip 102KB (M4 대비 +4KB)
+- 사용자 브라우저 검증 ✅:
+  1. 두 계정 → A 글 작성 → B 메인 5초 내 자동 표시 ✅
+  2. 1초 갱신 카운트다운 ✅ (urgent 강조 SQL로 단축 후 확인)
+  3. NewPostBanner 카운트 + 닫기 동작 ✅
+  4. NudgeBanner 클릭 → RequestModal 프리필 ✅
+
+### M6로 미룬 부분
+- bottom sheet 슬라이드 업 / step 가로 슬라이드 애니메이션 (CSS only)
+- toast/snackbar
+- `/me/notifications/summary` 엔드포인트 (현재 derived count로 충분)
+
+---
+
 ## 수평 결정 사항 (모든 M에 적용)
 
 ### TDD 적용 범위
@@ -372,13 +432,13 @@ M3에서 `RequestPublic`을 처음에 camelCase로 작성했다가 FE가 이미 
 
 ## 다음 단계
 
-1. **M4 수동 검증** (사용자) — offer 등록 / 수락 / 거래 성사 화면 양방향 phone 표시
-2. **M5. Polling / 타이머 / 배너** (PLAN.md §9 M5)
-   - TanStack `refetchInterval` 5초 polling (메인) / 1초 (상세 page에서 offer 변화)
-   - `CountdownTimer` 1초 setInterval로 교체, 1시간 미만 시 `urgent` 강조
-   - `NewPostBanner` ─ 마지막 본 시각 localStorage + GET `/requests?since=...`
-   - `NudgeBanner` ─ 카테고리/이웃별 추천 1건 (정적 풀 또는 가장 최근 open request)
-3. **M6. 마감** — 시드, Dockerfile (FE→nginx, BE→distroless), GitHub Actions CI, README 정리
+**M6. 마감** (PLAN.md §9 M6)
+- 시드 데이터 (`cargo run --bin seed` 또는 SQL 마이그레이션). 4명 사용자 + 카테고리별 샘플 글 몇 건.
+- 운영용 Dockerfile (FE → nginx static, BE → distroless 또는 alpine)
+- GitHub Actions CI: `cargo test`, `cargo clippy -D warnings`, `cargo sqlx prepare`, `pnpm typecheck`, `pnpm build`. PR 트리거.
+- 보류 task #6 (`#[sqlx::test]` 통합 테스트) 처리 — CI에서 MySQL 서비스 띄우고 실행
+- README 마감 (배포 절차 + 데모 URL이 있으면 추가)
+- 폴리시: bottom sheet 슬라이드 업, toast/snackbar (옵션)
 
 ---
 
@@ -387,7 +447,9 @@ M3에서 `RequestPublic`을 처음에 camelCase로 작성했다가 FE가 이미 
 | 영역 | 파일 수 (대략) | 테스트 수 |
 |---|---|---|
 | 백엔드 | 16 (auth 3 / models 3 / routes 4 / util 2 / tasks 1 / db·config·error·main) | 30 |
-| 프론트엔드 | 32 (lib 8 / features 9 / components 13 / routes 7) | 0 |
+| 프론트엔드 | 36 (lib 10 / features 9 / components 15 / routes 7) | 0 |
 | 마이그레이션 | 1 | — |
 
-테스트 진행: 21(M2) → 28(+M3) → 30(+M4 offer 모델). 핸들러 통합 테스트는 task로 별도 적재(보류).
+테스트 진행: 21(M2) → 28(+M3) → 30(+M4 offer 모델) → 30(M5 — FE 전용이라 BE 테스트 변동 없음). 핸들러 통합 테스트는 task #6으로 별도 적재(M6 CI에서 처리 예정).
+
+빌드 사이즈: 305KB(M2) → 324KB(+M3) → 343KB(+M4) → 347KB(+M5). gzip 93→98→101→102KB.
