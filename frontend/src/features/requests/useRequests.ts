@@ -8,9 +8,10 @@ import type { RequestListResponse } from '@/lib/types';
  * 같은 (dong, line_no) 글만 반환.
  * `lent=true`는 M3에서 BE가 항상 빈 리스트를 돌려주지만 UI는 동일하게 동작.
  *
- * staleTime을 짧게 둬서 모달/상세 후 메인 진입 시 신선하게 보이도록.
- * (M5에서 refetchInterval polling이 추가될 예정.)
+ * 5초 polling으로 다른 이웃의 새 글을 자동 표시.
  */
+const MAIN_POLL_MS = 5_000;
+
 export function useRequests(filters: RequestListFilters = {}) {
   return useQuery({
     queryKey: queryKeys.requests.list(filters),
@@ -21,6 +22,8 @@ export function useRequests(filters: RequestListFilters = {}) {
       const qs = params.toString();
       return apiFetch<RequestListResponse>(`/requests${qs ? `?${qs}` : ''}`);
     },
-    staleTime: 2_000,
+    staleTime: MAIN_POLL_MS / 2,
+    refetchInterval: MAIN_POLL_MS,
+    refetchIntervalInBackground: false,
   });
 }

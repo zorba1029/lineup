@@ -24,16 +24,24 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+export interface RequestPrefill {
+  name?: string;
+  category?: Category;
+  description?: string;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** NudgeBanner에서 추천 항목으로 모달을 열 때 사용. */
+  prefill?: RequestPrefill | null;
 }
 
 /**
  * "도움이 필요해요" 등록 시트.
  * 모바일 bottom sheet 스타일 — backdrop + 아래에서 슬라이드 업.
  */
-export function RequestModal({ open, onClose }: Props) {
+export function RequestModal({ open, onClose, prefill }: Props) {
   const create = useCreateRequest();
   const navigate = useNavigate();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -58,13 +66,21 @@ export function RequestModal({ open, onClose }: Props) {
   const category = watch('category');
   const urgent = watch('urgent');
 
-  // 닫힐 때 폼 리셋
+  // 열릴 때 prefill 적용 / 닫힐 때 폼 리셋
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      reset({
+        name: prefill?.name ?? '',
+        category: prefill?.category ?? '기타',
+        description: prefill?.description ?? '',
+        urgent: false,
+      });
+      setSubmitError(null);
+    } else {
       reset({ name: '', category: '기타', description: '', urgent: false });
       setSubmitError(null);
     }
-  }, [open, reset]);
+  }, [open, prefill, reset]);
 
   // ESC로 닫기
   useEffect(() => {
