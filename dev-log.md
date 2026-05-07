@@ -392,6 +392,69 @@ phone 노출 매트릭스:
 
 ---
 
+## M6. 로컬 마감 (seed + 통합 테스트 + README)
+
+목표: 로컬 demo·테스트 인프라 마무리. AWS 배포는 별도 phase.
+
+원래 PLAN.md §9 M6에 있던 운영 Dockerfile / GitHub Actions CI는 **AWS phase로 보류**:
+- BE는 EC2에 raw `cargo build --release` + systemd로 배포 예정 → BE Dockerfile 불필요
+- FE는 S3+CloudFront 정적 호스팅 → FE Dockerfile 불필요
+- CI는 배포 흐름 확정 후 도입
+
+따라서 M6는 3가지로 좁힘.
+
+### 1) `seed` 바이너리 (M6-1)
+`backend/src/bin/seed.rs` — `cargo run --bin seed`로 실행.
+- 사용자 4명: 101동 01라인 hong/kim/lee/park, 비밀번호 1234 (argon2 동적 해시)
+- 카테고리별 글 5건 (전동 드릴 / 케이크 틀 / 보드게임 / 보조배터리 / 청소 스팀기)
+- hong의 드릴 글에 kim·lee의 pending offer 2건 — 로그인 직후 accept 데모 가능
+- 멱등성: `username='hong'` 존재하면 스킵. `--reset` 옵션으로 `DELETE FROM users` (FK CASCADE) 후 재시드.
+
+### 2) `#[sqlx::test]` 통합 테스트 (M6-2)
+보류돼 있던 task #6를 처리.
+
+**lib.rs 리팩터** — 바이너리·테스트가 axum 앱을 공유하도록:
+- `src/lib.rs` 신규: `pub mod ...`, `AppState`, `build_app(state, cors_origin) -> Router`
+- `main.rs`는 thin entry point로 변경 (config 로드 → state → build_app → serve)
+- 기존 단위 테스트 30개는 lib 컨텍스트로 자연 이동, 그대로 통과
+
+**`backend/tests/`**:
+- `common/mod.rs` — `test_app(pool)`, `call(app, method, path, token, body)`, `signup_default` 등 헬퍼
+- `auth_flow.rs` (5 tests): signup→login→me 라운드트립, 중복 username 409, 잘못된 비번 401, 토큰 없이 me 401, 잘못된 unit 형식 400
+- `requests_flow.rs` (3 tests): 같은 라인 보임, 다른 라인 안 보임, 이웃의 PATCH/DELETE 403
+- `offers_flow.rs` (4 tests): 본인 글 offer 403, 중복 pending offer 409, **accept 동시성**, accept 후 다른 offer accept 시 409
+
+**핵심: `concurrent_accept_only_one_succeeds`** — `tokio::join!`로 같은 offer를 두 번 동시에 accept 호출. `SELECT ... FOR UPDATE` 트랜잭션이 직렬화해서 정확히 한 쪽만 200, 다른 쪽 409. PLAN.md §10 race 시나리오를 자동 검증.
+
+**실행**: 통합 테스트는 `#[sqlx::test]`가 per-test DB를 만들기 때문에 root 권한 DATABASE_URL 필요:
+```
+DATABASE_URL=mysql://root:dev@localhost:3306/linenb cargo test
+```
+
+### 3) README 마감 (M6-3)
+- 빠른 시작에 seed 단계 추가
+- 시드 계정 표 (hong/kim/lee/park, 비번 1234, 호수)
+- env 변수 정리 + 통합 테스트 root 자격증명 명시
+- 디렉토리 트리 갱신 (lib.rs / bin/seed.rs / tests/)
+- 마일스톤 M6 [x] 처리, "다음 phase: AWS PoC 배포" 안내
+
+### M6 검증
+- `cargo test`: **42/42** (단위 30 + 통합 12)
+- `cargo clippy --all-targets -- -D warnings`: clean
+- `cargo run --bin seed`: 멱등성 동작 확인 (기존 hong 있어 스킵 메시지)
+
+### 결정 사항
+- **lib.rs 리팩터의 trade-off**: 바이너리·테스트가 핸들러·extractor·models를 모두 공유하는 표준 Rust 패턴. cost 30분, 이후 통합 테스트 비용이 크게 줄어듦. 단위 테스트는 그대로 동작.
+- **`#[sqlx::test]` for MySQL은 root 자격증명 필요**: docker-compose의 `linenb` 사용자는 자기 DB만 접근 가능. 테스트 매크로가 per-test DB CREATE/DROP 필요. 실제 운영 자격증명과 분리되어 있어 OK.
+- **seed 멱등성**: `username='hong'` 존재 검사로 단순화. 더 정교한 hash-of-data check은 과공학. `--reset`이면 명시적으로 wipe.
+
+### 보류 (필요 시 추후)
+- AWS phase: EC2 + RDS + S3 + CloudFront + Route53 배포 runbook
+- GitHub Actions CI (배포 흐름 확정 후)
+- 통합 테스트의 검증 격차: phone 노출 매트릭스(matched 시 양 당사자만), refresh 토큰 라운드트립, GET ?since= 필터 등
+
+---
+
 ## 수평 결정 사항 (모든 M에 적용)
 
 ### TDD 적용 범위
@@ -432,13 +495,14 @@ M3에서 `RequestPublic`을 처음에 camelCase로 작성했다가 FE가 이미 
 
 ## 다음 단계
 
-**M6. 마감** (PLAN.md §9 M6)
-- 시드 데이터 (`cargo run --bin seed` 또는 SQL 마이그레이션). 4명 사용자 + 카테고리별 샘플 글 몇 건.
-- 운영용 Dockerfile (FE → nginx static, BE → distroless 또는 alpine)
-- GitHub Actions CI: `cargo test`, `cargo clippy -D warnings`, `cargo sqlx prepare`, `pnpm typecheck`, `pnpm build`. PR 트리거.
-- 보류 task #6 (`#[sqlx::test]` 통합 테스트) 처리 — CI에서 MySQL 서비스 띄우고 실행
-- README 마감 (배포 절차 + 데모 URL이 있으면 추가)
-- 폴리시: bottom sheet 슬라이드 업, toast/snackbar (옵션)
+**AWS PoC 배포** (M6 이후 별도 phase)
+- 도메인 등록 / Route53 호스팅 영역
+- S3 버킷 + CloudFront 배포 (FE), Route53 alias 레코드 — `lineup.{domain}`
+- EC2 (BE) — raw `cargo build --release` + systemd, nginx 또는 caddy reverse proxy + Let's Encrypt
+- RDS MySQL — DATABASE_URL은 EC2의 systemd unit env로
+- 배포 runbook 정리
+
+배포 후 폴리시 (시간 보고): toast/snackbar, bottom sheet 슬라이드 애니, GitHub Actions CI 도입.
 
 ---
 
@@ -446,10 +510,11 @@ M3에서 `RequestPublic`을 처음에 camelCase로 작성했다가 FE가 이미 
 
 | 영역 | 파일 수 (대략) | 테스트 수 |
 |---|---|---|
-| 백엔드 | 16 (auth 3 / models 3 / routes 4 / util 2 / tasks 1 / db·config·error·main) | 30 |
+| 백엔드 | 18 (auth 3 / models 3 / routes 4 / util 2 / tasks 1 / bin/seed 1 / db·config·error·main·lib) | **42** (단위 30 + 통합 12) |
 | 프론트엔드 | 36 (lib 10 / features 9 / components 15 / routes 7) | 0 |
 | 마이그레이션 | 1 | — |
+| 백엔드 테스트 인프라 | 4 (tests/common + 3 flow files) | — |
 
-테스트 진행: 21(M2) → 28(+M3) → 30(+M4 offer 모델) → 30(M5 — FE 전용이라 BE 테스트 변동 없음). 핸들러 통합 테스트는 task #6으로 별도 적재(M6 CI에서 처리 예정).
+테스트 진행: 21(M2) → 28(+M3) → 30(+M4) → 30(M5) → **42(+M6 통합 12)**.
 
-빌드 사이즈: 305KB(M2) → 324KB(+M3) → 343KB(+M4) → 347KB(+M5). gzip 93→98→101→102KB.
+빌드 사이즈(FE): 305KB(M2) → 324KB(+M3) → 343KB(+M4) → 347KB(+M5) → **347KB(M6, FE 변경 없음)**. gzip 93→98→101→102→102KB.
