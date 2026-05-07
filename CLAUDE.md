@@ -30,53 +30,69 @@
 | DB       | MySQL 8 (Docker) |
 | 빌드     | pnpm (FE), cargo (BE) |
 
-## 4. 디렉토리 (현재 = M1 완료)
+## 4. 디렉토리 (현재 = M4 완료, 다음 = M5)
 
 ```
 impl/
-├── PLAN.md / README.md / CLAUDE.md (이 파일)
+├── PLAN.md / README.md / CLAUDE.md / dev-log.md
 ├── docker-compose.yml          # mysql + adminer
 ├── .env.example
 ├── backend/
-│   ├── Cargo.toml
+│   ├── Cargo.toml / Cargo.lock
 │   ├── .env.example
 │   ├── migrations/
 │   │   └── 0001_init.sql       # users / requests / offers
 │   └── src/
-│       ├── main.rs             # /healthz + /readyz, AppState
+│       ├── main.rs             # /healthz + /readyz, AppState, expire task spawn
 │       ├── config.rs
 │       ├── db.rs               # MySqlPool
 │       ├── error.rs            # AppError + IntoResponse
-│       ├── auth/   (M2에 채움)
-│       ├── routes/ (M2에 채움)
-│       ├── services/ (M3~M4)
-│       ├── models/ (M3)
-│       └── util/   (line.rs - "101호" → "01")
+│       ├── auth/               # ✅ M2
+│       │   ├── password.rs     # argon2 hash/verify (TDD 3 tests)
+│       │   ├── jwt.rs          # Claims + TokenKind, encode/decode (TDD 5 tests)
+│       │   └── extractor.rs    # AuthUser FromRequestParts (TDD 7 tests)
+│       ├── models/             # ✅ M2~M4
+│       │   ├── user.rs         # UserRow + UserPublic
+│       │   ├── request.rs      # RequestWithAuthorRow + DTOs (TDD 2 tests)
+│       │   └── offer.rs        # OfferWithOffererRow + DTOs (TDD 2 tests)
+│       ├── routes/             # ✅ M2~M4 (services/ 미도입 — DB 접근 inline)
+│       │   ├── auth.rs         # signup/login/refresh/logout/me
+│       │   ├── requests.rs     # CRUD + detail wrapper(offers + count)
+│       │   └── offers.rs       # 6 endpoints + accept 트랜잭션
+│       ├── tasks/              # ✅ M3
+│       │   └── expire.rs       # 60s interval, status='open' → 'expired'
+│       └── util/               # ✅ M2~M3
+│           ├── line.rs         # "101호" → "01" (TDD 6 tests)
+│           └── category.rs     # 6 카테고리 validator (TDD 5 tests)
 └── frontend/
-    ├── package.json / vite.config.ts / tailwind.config.ts / tsconfig.json
+    ├── package.json / pnpm-lock.yaml
+    ├── vite.config.ts / tailwind.config.ts / tsconfig*.json
     ├── index.html
     └── src/
         ├── main.tsx            # QueryClient + BrowserRouter
-        ├── App.tsx             # 7개 라우트
+        ├── App.tsx             # 7개 라우트, RequireAuth로 보호 라우트 래핑
         ├── styles/index.css    # @tailwind ...
         ├── components/
-        │   ├── layout/MobileShell.tsx   # ✅ 완료
-        │   ├── post/  (M3)
-        │   ├── nudge/ (M3)
-        │   ├── modals/ (M3~M4)
-        │   ├── sheets/ (M4)
-        │   ├── timer/ (M5)
-        │   └── ui/    (점진적)
-        ├── routes/             # ✅ 7개 빈 페이지 모두 있음
+        │   ├── auth/RequireAuth.tsx           # ✅ M2
+        │   ├── layout/{MobileShell,Header}    # ✅ M1/M3
+        │   ├── modals/{Confirm,Request,MyOffer}# ✅ M3~M4
+        │   ├── post/{PostCard,PostList,FilterChips,Fab,StatusBadge} # ✅ M3
+        │   ├── sheets/OfferBottomSheet.tsx    # ✅ M4 (2-step)
+        │   └── timer/CountdownTimer.tsx       # M5에서 1초 갱신으로 교체 (현재 stub)
+        ├── routes/                             # ✅ 7개 모두 구현됨
         ├── features/
-        │   ├── auth/   (M2)
-        │   ├── requests/ (M3)
-        │   └── offers/ (M4)
+        │   ├── auth/{useLogin,useSignup,useMe,useLogout}     # ✅ M2
+        │   ├── requests/{useRequests,useRequest,useCreate,useUpdate,useDelete} # ✅ M3
+        │   └── offers/{useCreate,useUpdate,useDelete,useAccept,useReject}      # ✅ M4
         └── lib/
-            ├── api.ts (M2 - fetch 래퍼)
-            ├── auth.ts (M2 - Zustand 토큰 store)
-            ├── time.ts (M5 - countdown)
-            └── queryKeys.ts
+            ├── api.ts          # apiFetch + 401 in-flight refresh
+            ├── auth.ts         # Zustand persist store
+            ├── categories.ts   # CATEGORIES 상수
+            ├── confirm.ts      # 전역 confirm slot
+            ├── queryKeys.ts
+            ├── time.ts         # formatRelative / formatRemaining
+            ├── types.ts        # User, RequestPublic, OfferPublic, ...
+            └── validation.ts   # 자체 zodResolver (외부 dep 회피)
 ```
 
 ## 5. 자주 쓰는 명령어
@@ -116,7 +132,7 @@ curl http://localhost:8080/readyz     # → ready (DB 연결 정상)
 
 ### 6.1 백엔드
 - 모든 핸들러는 `Result<Json<T>, AppError>` 반환. 에러 변환은 `?` 로 통일.
-- DB 접근은 `services/` 모듈에 모음. 핸들러는 권한 체크 + 호출만.
+- DB 접근은 `routes/*.rs`에 inline (services/ 모듈 미도입 — MVP 단순성 우선). 각 라우트 파일이 SQL 베이스 상수(`SELECT_BASE`)와 `fetch_one` 헬퍼 보유. 너무 커지면 그때 services/로 추출.
 - 트랜잭션이 필요한 곳(특히 `POST /offers/:id/accept`):
   ```rust
   let mut tx = state.db.begin().await?;
@@ -154,36 +170,28 @@ curl http://localhost:8080/readyz     # → ready (DB 연결 정상)
 | 이웃 격리 우회 | 모든 쿼리 `WHERE u.dong = ? AND u.line_no = ?` 강제 |
 | 모바일 100vh 버그 | `min-h-dvh` + safe-area-inset (이미 적용) |
 
-## 8. 다음 작업 ─ M2 Auth (예상 2~3일)
+## 8. 다음 작업 ─ M5 Polling / 타이머 / 배너 (예상 1~2일)
 
-PLAN.md §9 M2 그대로:
-
-### 백엔드
-1. `src/auth/password.rs` ─ argon2 hash/verify.
-2. `src/auth/jwt.rs` ─ encode/decode + Claims.
-3. `src/auth/extractor.rs` ─ axum `FromRequestParts` 구현, Bearer → Claims → DB 조회 → `AuthUser`.
-4. `src/util/line.rs` ─ `extract_line_no("101호") -> "01"` (정규식).
-5. `src/routes/auth.rs` ─ POST /signup, /login, /refresh, /logout, GET /me.
-6. `src/routes/mod.rs` ─ `/api/v1` nested router 조립, main.rs에 mount.
-7. validator 크레이트로 username/password/dong/unit/phone 검증.
+PLAN.md §9 M5 그대로:
 
 ### 프론트엔드
-1. `src/lib/auth.ts` ─ Zustand store: `{ accessToken, refreshToken, user, login(), logout() }`. localStorage persist.
-2. `src/lib/api.ts` ─ fetch 래퍼: 자동 Bearer 주입, 401 → refresh 1회 시도.
-3. `src/features/auth/useLogin.ts`, `useSignup.ts`, `useMe.ts` ─ TanStack mutation/query.
-4. `src/components/auth/RequireAuth.tsx` ─ 비로그인이면 `/login` 리다이렉트.
-5. `LoginPage.tsx` / `SignupPage.tsx` ─ react-hook-form + zod, 에러 표시.
-6. `App.tsx` ─ 보호된 라우트(`/`, `/requests/:id`, ...)를 `<RequireAuth>`로 감쌈.
+1. `lib/api.ts` 사용자 — TanStack Query에 `refetchInterval`. 메인은 5초, RequestDetailPage는 1초로 좁힘.
+2. `components/timer/CountdownTimer.tsx` — 현재 정적 stub을 `setInterval(1000)`로 교체. 1시간 미만 시 `urgent` 강조 클래스(빨간 색 또는 `text-accent`).
+3. `components/nudge/NewPostBanner.tsx` (신규) — 「마지막으로 본 시각」을 localStorage에 저장하고, `GET /requests?since=...`로 미열람 N건 표시. 닫기 → 세션 동안 비표시.
+4. `components/nudge/NudgeBanner.tsx` (신규) — 카테고리/이웃별 추천 1건. MVP에서는 가장 최근 open request 1건을 추천하는 정도로 단순화 가능.
+5. `MainPage.tsx`에서 두 배너 마운트 (이미 자리는 코멘트로 비워 둠).
+
+### 백엔드
+- `GET /requests?since=ISO8601`은 이미 구현됨. 추가 작업 없음.
+- 필요 시 `GET /me/notifications/summary` 신규 엔드포인트 (PLAN.md §5.4) — `{ unseenRequestCount, pendingOfferCount, matchedToday }`. M5 범위지만 FE가 since 쿼리만으로 충분히 동작하면 미루기.
 
 ### 데모 가능 상태
-회원가입 → 로그인 → 메인(여전히 빈 페이지) → 로그아웃 → 새로고침해도 토큰 유지/만료.
+- 메인을 두고 다른 브라우저에서 글 작성 → 5초 내 자동 표시
+- 카운트다운이 실시간으로 줄어들고, 1시간 미만이 되면 빨간색으로 강조
 
-## 9. M3~M6 한눈에
+## 9. M6 한눈에
 
-- **M3** 게시글 CRUD + 메인 화면 — `requests` API + 메인 페이지(헤더, 필터, 리스트, FAB 모달), 상세 작성자/이웃 뷰. 72h `expires_at` 저장 + 백그라운드 만료 task.
-- **M4** Offer 플로우 — `offers` API + accept 트랜잭션, `<OfferBottomSheet>`, `<MyOfferModal>`, MatchedPage, OfferRegisteredPage.
-- **M5** Polling/타이머/배너 — TanStack `refetchInterval`, `<CountdownTimer>`, NewPostBanner, NudgeBanner.
-- **M6** 마감 — 시드 데이터, 운영 Dockerfile, GitHub Actions CI, README 정리.
+- **M6** 마감 — 시드 데이터(`cargo run --bin seed` 또는 SQL 마이그레이션), 운영 Dockerfile(FE → nginx static, BE → distroless), GitHub Actions CI(`cargo test`, `cargo sqlx prepare`, `pnpm build`), README 정리, sqlx::test 통합 테스트(현재 task로 보류 중).
 
 ## 10. 메모
 
@@ -195,4 +203,4 @@ PLAN.md §9 M2 그대로:
 
 ---
 
-이 컨텍스트를 바탕으로 곧장 M2 작업에 들어갈 수 있다. 막히면 PLAN.md의 해당 절을 다시 펴자.
+이 컨텍스트를 바탕으로 곧장 M5 작업에 들어갈 수 있다. 막히면 PLAN.md의 해당 절을 펴고, 진행 흐름 복기는 `dev-log.md`를 참조.

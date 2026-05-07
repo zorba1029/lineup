@@ -62,13 +62,16 @@ impl/
 ## 마일스톤 진행
 
 - [x] **M1** Skeleton — `/healthz`, `/readyz`, 7개 빈 페이지, 라우터, MySQL 마이그레이션
-- [ ] **M2** Auth — JWT, signup/login/refresh/me, 라우트 가드
-- [ ] **M3** 게시글 CRUD + 메인 화면
-- [ ] **M4** Offer 플로우 (2-step sheet, accept 트랜잭션, 매칭 화면)
-- [ ] **M5** Polling, 카운트다운, 새 글 배너
-- [ ] **M6** 마감 (시드, 운영 Dockerfile, CI, README 정리)
+- [x] **M2** Auth — argon2/JWT/AuthUser extractor, signup/login/refresh/logout/me, 라우트 가드 (TDD 21 tests)
+- [x] **M3** 게시글 CRUD + 메인 화면 — `/api/v1/requests/*` 5엔드포인트, (dong, line_no) 격리, 72h 만료 백그라운드 task, MainPage(Header/FilterChips/Fab) + RequestDetailPage
+- [x] **M4** Offer 플로우 — `/api/v1/{requests/:id/offers, offers/*}` 6엔드포인트 + accept 트랜잭션, OfferBottomSheet(2-step), MyOfferModal, MatchedPage(양 당사자 phone 노출), OfferRegisteredPage
+- [ ] **M5** Polling, 1초 카운트다운, NewPostBanner, NudgeBanner
+- [ ] **M6** 마감 (시드, 운영 Dockerfile, GitHub Actions CI, README 정리)
 
-자세한 내용은 `PLAN.md` §9 참조.
+진행 기록은 [`dev-log.md`](./dev-log.md), 종합 플랜은 [`PLAN.md`](./PLAN.md) §9 참조.
 
-git repository (public)
+검증 현황: `cargo test` 30/30 / `cargo clippy -D warnings` clean / `pnpm typecheck` & `pnpm build` clean.
+
+## Repository
+
 https://github.com/zorba1029/lineup.git
