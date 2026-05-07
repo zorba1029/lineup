@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+.vite/
+*.log
+
+# tsc -b 빌드 부산물
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
