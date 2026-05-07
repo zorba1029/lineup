@@ -30,7 +30,7 @@
 | DB       | MySQL 8 (Docker) |
 | 빌드     | pnpm (FE), cargo (BE) |
 
-## 4. 디렉토리 (현재 = M5 완료, 다음 = M6)
+## 4. 디렉토리 (현재 = M6 완료, 다음 phase = AWS 배포)
 
 ```
 impl/
@@ -42,8 +42,13 @@ impl/
 │   ├── .env.example
 │   ├── migrations/
 │   │   └── 0001_init.sql       # users / requests / offers
+│   ├── tests/                  # ✅ M6 — #[sqlx::test] 통합 테스트
+│   │   ├── common/mod.rs       # test_app, call, signup_default 헬퍼
+│   │   └── {auth,requests,offers}_flow.rs    # 12 tests (accept 동시성 포함)
 │   └── src/
-│       ├── main.rs             # /healthz + /readyz, AppState, expire task spawn
+│       ├── lib.rs              # ✅ M6 — build_app(state, cors) 바이너리·테스트 공유
+│       ├── main.rs             # 진입점 (lib::build_app 호출)
+│       ├── bin/seed.rs         # ✅ M6 — cargo run --bin seed (멱등, --reset 옵션)
 │       ├── config.rs
 │       ├── db.rs               # MySqlPool
 │       ├── error.rs            # AppError + IntoResponse
@@ -173,28 +178,27 @@ curl http://localhost:8080/readyz     # → ready (DB 연결 정상)
 | 이웃 격리 우회 | 모든 쿼리 `WHERE u.dong = ? AND u.line_no = ?` 강제 |
 | 모바일 100vh 버그 | `min-h-dvh` + safe-area-inset (이미 적용) |
 
-## 8. 다음 작업 ─ M6 마감 (예상 2일)
+## 8. 다음 phase ─ AWS PoC 배포 (M6 이후)
 
-PLAN.md §9 M6:
+로컬은 M6에서 모두 완료 (seed + 통합 테스트 12개 + README). 다음은 AWS에 올려 팀 데모.
 
-### 백엔드
-1. **시드 데이터** — `migrations/0002_seed.sql` 또는 `bin/seed.rs`. 사용자 4명(101동 01라인 hong/kim/lee/park) + 카테고리별 샘플 글 3~5건. 비밀번호는 argon2 미리 해시한 값 박아두거나 시드 바이너리에서 동적 생성.
-2. **`#[sqlx::test]` 통합 테스트** (보류 task #6) — signup→login→me 라운드트립, 중복 username 409, request CRUD 격리, offer accept 트랜잭션 동시성. CI에서 MySQL service container로 실행.
-3. **운영 Dockerfile** — multi-stage build, distroless 또는 `gcr.io/distroless/cc-debian12` 베이스. `cargo sqlx prepare`로 오프라인 SQL 캐시 후 빌드.
+### 사용자 결정 (이미 확정)
+- **FE**: S3 + CloudFront + Route53 alias
+- **BE**: EC2 1대에 raw `cargo build --release` + systemd (Docker 미사용)
+- **DB**: AWS RDS MySQL
+- **DNS**: Route53 (custom 도메인 사용)
+- **HTTPS**: ACM 인증서 (CloudFront에 적용) + EC2는 nginx/caddy + Let's Encrypt 또는 ALB+ACM (TBD)
 
-### 프론트엔드
-1. **운영 Dockerfile** — `pnpm build` → `dist/` → nginx static. SPA fallback (`try_files $uri /index.html`).
-2. **toast/snackbar** (옵션) — 현재는 인라인 에러만. polish.
-
-### 인프라
-1. **GitHub Actions CI** — `.github/workflows/ci.yml`:
-   - BE: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`(MySQL service)
-   - FE: `pnpm typecheck`, `pnpm build`
-   - PR + main push 트리거
-2. **README 마감** — 배포 절차, env 변수 정리, 데모 URL/스크린샷 (있으면).
+### 작업 항목 (예상 0.5~1일)
+1. **도메인 등록 / Route53 호스팅 영역 생성**
+2. **FE 배포**: `pnpm build` → S3 sync, CloudFront distribution + 404→index.html 매핑(SPA fallback), Route53 A 레코드(alias)
+3. **EC2 셋업**: t3.small 정도, security group(80/443/22), Rust 빌드 + systemd unit (`linenb-backend.service`), nginx reverse proxy + certbot
+4. **RDS 셋업**: db.t4g.micro, security group(EC2에서 3306만), `sqlx migrate run` + `cargo run --bin seed`
+5. **env 정리**: BE `.env`(또는 systemd `Environment=`)에 RDS DATABASE_URL, 강한 JWT_SECRET, 운영 도메인의 CORS_ORIGIN
+6. **검증**: 모바일에서 도메인 접속 → 가입/로그인/거래 라운드트립
 
 ### 워크플로
-M5부터 적용된 패턴 유지: `feat/m6-final` branch → 검증 → `--no-ff` merge.
+M5에서 확립된 branch+PR 흐름 유지: `feat/aws-deploy` 또는 `feat/m7-deploy` branch → push → PR 생성 (`gh pr create`) → 사용자가 GitHub UI에서 머지.
 
 ## 10. 메모
 
@@ -206,4 +210,4 @@ M5부터 적용된 패턴 유지: `feat/m6-final` branch → 검증 → `--no-ff
 
 ---
 
-이 컨텍스트를 바탕으로 곧장 M6 작업에 들어갈 수 있다. 막히면 PLAN.md의 해당 절을 펴고, 진행 흐름 복기는 `dev-log.md`를 참조.
+이 컨텍스트를 바탕으로 곧장 AWS 배포 phase에 들어갈 수 있다. 막히면 PLAN.md의 해당 절을 펴고, 진행 흐름 복기는 `dev-log.md`를 참조.
