@@ -46,6 +46,17 @@ export default {
         lnb: '0 4px 20px rgba(91,110,247,0.10)',
         'lnb-sm': '0 2px 8px rgba(0,0,0,0.07)',
       },
+      keyframes: {
+        // 프로토타입 .urgent-dot blink. 사이클의 대부분(0~70%)을 full opacity로
+        // 머물고 80% 부근에서 짧게 0.25로 dim. 너무 자주 깜빡이지 않는 차분한 톤.
+        'blink-soft': {
+          '0%, 70%, 100%': { opacity: '1' },
+          '85%': { opacity: '0.25' },
+        },
+      },
+      animation: {
+        'blink-soft': 'blink-soft 2s ease-in-out infinite',
+      },
     },
   },
   plugins: [],
