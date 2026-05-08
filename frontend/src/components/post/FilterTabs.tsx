@@ -12,6 +12,8 @@ export type FilterMode = 'all' | 'mine' | 'lent';
 interface Props {
   mode: FilterMode;
   onChange: (mode: FilterMode) => void;
+  /** 활성 탭 안에 표시할 현재 필터 결과 개수. */
+  count?: number;
 }
 
 const TABS: ReadonlyArray<{ value: FilterMode; label: string }> = [
@@ -20,7 +22,7 @@ const TABS: ReadonlyArray<{ value: FilterMode; label: string }> = [
   { value: 'lent', label: '내가 빌려준 글' },
 ];
 
-export function FilterTabs({ mode, onChange }: Props) {
+export function FilterTabs({ mode, onChange, count }: Props) {
   return (
     <div
       role="tablist"
@@ -37,13 +39,25 @@ export function FilterTabs({ mode, onChange }: Props) {
             aria-selected={active}
             onClick={() => onChange(t.value)}
             className={
-              'flex-1 rounded-lnb-sm px-2 py-2 text-sm font-bold transition-colors ' +
+              'flex flex-1 items-center justify-center gap-1.5 rounded-lnb-sm px-2 py-2 text-sm font-bold transition-colors ' +
               (active
                 ? 'bg-primary text-white shadow-lnb-sm'
                 : 'text-sub hover:text-text')
             }
           >
-            {t.label}
+            <span>{t.label}</span>
+            {/* 모든 탭에 동일 폭 placeholder. 비활성에선 invisible로 텍스트 위치 고정. */}
+            <span
+              aria-hidden={!active}
+              className={
+                'min-w-[22px] rounded-full px-1.5 text-xs font-extrabold leading-5 ' +
+                (active && count !== undefined
+                  ? 'bg-white text-primary shadow-lnb-sm'
+                  : 'invisible')
+              }
+            >
+              {count ?? 0}
+            </span>
           </button>
         );
       })}

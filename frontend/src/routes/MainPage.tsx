@@ -60,7 +60,7 @@ export function MainPage() {
       <NudgeBanner onPick={openPrefilledModal} />
 
       <div className="flex flex-1 flex-col gap-3 px-4 pb-28 pt-4">
-        <FilterTabs mode={filter} onChange={setFilter} />
+        <FilterTabs mode={filter} onChange={setFilter} count={items.length} />
 
         {requestsQuery.isLoading ? (
           <div className="rounded-lnb bg-card py-12 text-center text-sm text-sub shadow-lnb-sm">

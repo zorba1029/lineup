@@ -15,12 +15,12 @@ export function Header({ user }: Props) {
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4">
       <div className="text-lg font-black text-text">옆집마켓</div>
-      <div className="flex items-center gap-3">
-        <div className="text-right text-sm text-sub">
-          <span className="font-bold text-text">
+      <div className="flex items-center gap-2">
+        <div className="rounded-lnb-sm bg-primary-light px-2.5 py-1 text-right text-sm text-primary-dark">
+          <span className="font-bold">
             {user.dong} {user.unit}
-          </span>{' '}
-          · {user.name}님
+          </span>
+          <span className="font-medium"> · {user.name}님</span>
         </div>
         <button
           type="button"
