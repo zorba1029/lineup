@@ -10,6 +10,9 @@ import type { RequestPublic } from '@/lib/types';
  *
  * 별도 fetch 없이 polling 결과와 자동 동기화. 닫기 → lastSeenAt = now.
  * 카운트 0이면 자기 자신을 렌더하지 않음 (null 반환).
+ *
+ * 디자인은 NudgeBanner와 같은 톤 (primary 그라데이션 + 라벨 + 큰 흰 글씨 +
+ * 노란 카운트 강조). 우측은 흰 칩 대신 작은 닫기(✕) 버튼.
  */
 export interface NewPostBannerProps {
   items: RequestPublic[];
@@ -30,15 +33,20 @@ export function NewPostBanner({ items, currentUserId }: NewPostBannerProps) {
   if (count === 0) return null;
 
   return (
-    <div className="mx-4 mt-3 flex items-center justify-between rounded-lnb bg-primary-light px-4 py-3 shadow-lnb-sm">
-      <span className="text-sm font-bold text-primary-dark">
-        새 글 {count}건이 올라왔어요 🆕
+    <div className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-lnb bg-gradient-to-br from-primary to-[#7C8BFF] px-4 py-4 shadow-lnb">
+      <span className="flex min-w-0 flex-col gap-1">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+          새 소식
+        </span>
+        <span className="text-lg font-extrabold leading-snug text-white">
+          <span className="text-yellow">{count}건</span>의 새 글이 올라왔어요
+        </span>
       </span>
       <button
         type="button"
         aria-label="배너 닫기"
-        className="text-sub hover:text-text"
         onClick={markSeen}
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/20 text-base text-white transition-colors hover:bg-white/30"
       >
         ✕
       </button>
