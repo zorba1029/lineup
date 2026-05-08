@@ -149,8 +149,9 @@ impl/
 - [x] **M3** 게시글 CRUD + 메인 화면 — `/api/v1/requests/*` 5엔드포인트, (dong, line_no) 격리, 72h 만료 백그라운드 task, MainPage + RequestDetailPage
 - [x] **M4** Offer 플로우 — `/api/v1/{requests/:id/offers, offers/*}` 6엔드포인트 + accept 트랜잭션, OfferBottomSheet(2-step), MyOfferModal, MatchedPage(양 당사자 phone 노출)
 - [x] **M5** Polling / 1초 카운트다운 / NewPostBanner / NudgeBanner — TanStack `refetchInterval`(메인 5s, 상세 1s + status 의존 자동 중단), lastSeen localStorage 기반 derived 카운트, 정적 풀 + RequestModal 프리필
-- [x] **M6** 로컬 마감 — seed 바이너리 (멱등), `#[sqlx::test]` 통합 테스트 12개 (accept 동시성 포함), README 정리
+- [x] **M6** 로컬 마감 — seed 바이너리 (멱등), `#[sqlx::test]` 통합 테스트 (accept 동시성 포함), README 정리
+- [x] **Post-M6 폴리시** — PostCard 시각 정리(좌측 status bar / 상단 pill / blink dot / 카테고리 통일), `pending_offer_count` list/detail 통합, `lent` 필터 확장(pending 포함), 3-tab segmented filter, NudgeBanner prototype 톤, ParticipantBadge
 
 다음 phase: **AWS PoC 배포** — CloudFront + S3 (FE), EC2 + RDS (BE/DB), Route53 (DNS).
 
-검증 현황: `cargo test` **42/42** (단위 30 + 통합 12) · `cargo clippy -D warnings` clean · `pnpm typecheck` / `pnpm build` clean (151 modules, gzip 102KB).
+검증 현황: `cargo test` **46/46** (단위 31 + 통합 15) · `cargo clippy --all-targets -- -D warnings` clean · `pnpm typecheck` / `pnpm build` clean (gzip ~103KB).
