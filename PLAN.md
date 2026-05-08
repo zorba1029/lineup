@@ -1,8 +1,15 @@
-# 라인이웃(옆집마켓) – 개발 플랜 v1.1
+# 라인이웃(옆집마켓) – 개발 플랜 v1.2
 
 > 같은 아파트 동(棟)·라인(예: 01라인 = 101·201·301·401·501호) 이웃 간 즉시 물품 대여 매칭 모바일 웹 서비스.
 > Source: `ideation/hn_sharing/neighbor-borrow-service.md`(기획서) + `ideation/hn_sharing/neighbor-borrow-app.html`(작동하는 프로토타입, 1,312줄).
 > 화면 mockup: Cowork artifact `linenb-screen-mockups` (12개 화면, 5개 섹션).
+>
+> **v1.2 변경점** (M6 + post-M6 폴리시 후 사용자·기획자 결정 반영):
+> - §1.B 메인 필터: 「독립 토글 칩 2개」 → 「**3-tab segmented control** (전체 / 내 글 보기 / 내가 빌려준 글)」, 상호 배타적.
+> - §1.B Nudge 배너: 「자동 request 등록」 → 「**RequestModal 프리필** 모달 (사용자 확인 후 등록)」.
+> - §5.2 `GET /requests?lent=true` 의미 명시: 「내가 빌려주겠다고 응답한 글 — `pending` + `accepted` 둘 다, `cancelled`/`rejected` 제외」.
+> - §5.2 `GET /requests/:id` 응답 shape 명시: `{request, offers}` wrapper. `pending_offer_count`는 `request` 내부에 통합 (list/detail 공통 필드).
+> - §5.2 `GET /requests` 응답 shape: `{items: RequestPublic[]}`. `RequestPublic`에 `pending_offer_count` 포함 (메인 카드의 "N명 응답" 칩 표시용).
 >
 > **v1.1 변경점**: §1 화면 표를 9 → 12개로 확장하고 5개 섹션(A 인증 / B 메인 / C 상세 / D Offer / E 매칭&공통)으로 그룹핑. 신규 화면 3개(`/signup`, MyOfferModal, ConfirmModal) 추가. §6.3 컴포넌트 매핑 갱신.
 
@@ -37,7 +44,7 @@
 
 | # | 화면 | Path / 형태 | 주요 요소 |
 |---|---|---|---|
-| 03 | 메인 | `/` | 헤더(로고 + `dong unit · name`), 새 글 배너(미열람 N건), nudge 배너(랜덤 AVAILABLE 1건), 필터 칩 2개(`내 글 보기`, `내가 빌려준 글`), 게시글 카드 리스트, FAB(＋) |
+| 03 | 메인 | `/` | 헤더(로고 + `dong unit · name`), 새 글 배너(미열람 N건), nudge 배너(랜덤 AVAILABLE 1건), **필터 3-tab** (`전체` / `내 글 보기` / `내가 빌려준 글`, 상호 배타, default `전체`), 게시글 카드 리스트, FAB(＋) |
 | 04 | FAB 요청 모달 | 모달 (메인 위) | 물건 이름, 설명, 긴급 토글 → `POST /requests` → 작성자 상세(05)로 이동 |
 
 ### C. 게시글 상세 (M3 후반)
@@ -67,7 +74,7 @@
 
 1. **72시간 카운트다운** ─ `formatCountdown(startTime)`, 1초 간격 갱신, 1시간 미만 시 `urgent` 강조 클래스. 만료 시 게시글 status = `expired`.
 2. **새 글 배너** ─ 로그인 시점 기준 미열람 request 수를 표시. 닫기 → 세션 동안 비표시.
-3. **Nudge 배너** ─ 본인 외 AVAILABLE 풀에서 랜덤 1건. 클릭 시 그 아이템 이름으로 자동 request 등록 + 상세로 이동.
+3. **Nudge 배너** ─ 본인 외 AVAILABLE 풀에서 랜덤 1건. 클릭 시 RequestModal이 해당 아이템으로 **프리필된 채 열림** (사용자 확인 후 등록). 잘못 누름 방지 + 같은 라인 이웃 모두에게 알림이 가는 구조라 신중성 우선.
 4. **2-step bottom sheet** ─ next/prev 시 `anim-next`/`anim-prev` CSS 애니메이션. 신규 등록과 기존 offer 수정 시 동일 UI 재사용 (`editingOfferId`).
 5. **수락/거절 토글** ─ 작성자가 한 offer를 accept하면 상대 정보 + 약속이 `matched` 화면에 즉시 표출. 거절 offer는 리스트에서 사라짐(`status = rejected`).
 
@@ -234,22 +241,24 @@ CREATE TABLE offers (
 
 | Method | Path | Query / Body | 응답 / 권한 |
 |---|---|---|---|
-| GET    | `/requests` | `?mine=bool&lent=bool&since=ISO8601` | 같은 (dong, line_no) 게시글 리스트. `since` 이후 변경분만. |
-| POST   | `/requests` | `{name, category, description, urgent}` | 작성자=본인. 서버가 `start_time=now`, `expires_at=now+72h`, `status=open` 설정. |
-| GET    | `/requests/:id` | — | 같은 라인이면 누구나. offers 포함 (작성자에게는 모든 offer, 이웃에게는 자기 offer만 + 카운트). |
-| PATCH  | `/requests/:id` | `{description?, urgent?}` | 작성자만. matched/expired면 거부. |
-| DELETE | `/requests/:id` | — | 작성자만. status=cancelled 로 soft-delete. |
+| GET    | `/requests` | `?mine=bool&lent=bool&since=ISO8601` | `{items: RequestPublic[]}`. 같은 (dong, line_no) 글. `since` 이후 변경분만. **세 필터는 상호 배타적**: `mine=true`는 작성자 = 본인, `lent=true`는 본인이 등록한 `pending`/`accepted` offer가 있는 글 (cancelled/rejected 제외). 둘 다 false면 전체. |
+| POST   | `/requests` | `{name, category, description, urgent}` | 201 + `RequestPublic`. 작성자=본인. 서버가 `start_time=now`, `expires_at=now+72h`, `status=open` 설정. |
+| GET    | `/requests/:id` | — | `{request: RequestPublic, offers: OfferPublic[]}`. 같은 라인이면 누구나. offers는 작성자에겐 모든 offer (cancelled 제외), 이웃에겐 자기 것만. **`pending_offer_count`는 `request` 내부 필드**(list/detail 공통). |
+| PATCH  | `/requests/:id` | `{description?, urgent?}` | `RequestPublic`. 작성자만. matched/expired면 거부 (409). |
+| DELETE | `/requests/:id` | — | 204. 작성자만. status=cancelled 로 soft-delete. |
+
+`RequestPublic` 핵심 필드: `id, name, category, description, urgent, status, start_time, expires_at, created_at, author{id,name,dong,unit,line_no,phone?}, pending_offer_count`. `author.phone`은 `status='matched'` && (현재 사용자가 매칭된 offerer)일 때만 포함.
 
 ### 5.3 Offers (빌려드릴게요)
 
 | Method | Path | Body | 응답 / 권한 |
 |---|---|---|---|
-| POST   | `/requests/:id/offers` | `{rentalTime, returnTime, rentalPlace, returnPlace}` | 같은 라인이면서 본인 게시글 X. request status=open 일 때만. |
-| GET    | `/requests/:id/offers` | — | 작성자 → 전체. 이웃 → 자기 것만. |
-| PATCH  | `/offers/:id` | 동일 | 본인 offer + status=pending 일 때만. |
-| DELETE | `/offers/:id` | — | 본인 offer + status=pending → cancelled. |
-| POST   | `/offers/:id/accept` | — | request 작성자만. 트랜잭션: 이 offer=accepted, 같은 request의 다른 pending=rejected, request.status=matched. 응답에 `matchedInfo` 포함. |
-| POST   | `/offers/:id/reject` | — | request 작성자만. status=rejected. |
+| POST   | `/requests/:id/offers` | `{rental_time, return_time, rental_place, return_place}` | 201 + `OfferPublic`. 같은 라인이면서 본인 게시글 X. request status=open 일 때만. 같은 (request, user)에 active offer(pending) 1건만 허용 (409). |
+| GET    | `/requests/:id/offers` | — | `{items: OfferPublic[]}`. 작성자 → 전체 (cancelled 제외). 이웃 → 자기 것만. |
+| PATCH  | `/offers/:id` | 동일 (Optional fields) | `OfferPublic`. 본인 offer + status=pending 일 때만 (409). |
+| DELETE | `/offers/:id` | — | 204. 본인 offer + status=pending → cancelled. 멱등. |
+| POST   | `/offers/:id/accept` | — | `{request, offer}` (양 당사자 phone 포함). request 작성자만. 트랜잭션: 이 offer=accepted, 같은 request의 다른 pending=rejected, request.status=matched. |
+| POST   | `/offers/:id/reject` | — | `OfferPublic`. request 작성자만. status=rejected. |
 
 ### 5.4 Polling 보조
 
