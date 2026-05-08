@@ -7,7 +7,7 @@
 mod common;
 
 use axum::http::{Method, StatusCode};
-use common::{call, signup_default, test_app};
+use common::{call, login_default, signup_default, test_app};
 use serde_json::json;
 use sqlx::MySqlPool;
 
@@ -156,6 +156,147 @@ async fn concurrent_accept_only_one_succeeds(pool: MySqlPool) {
         "exactly one accept should succeed (got s1={s1} s2={s2})"
     );
     assert_eq!(conflicts, 1);
+}
+
+/// lent=true 필터 — pending offer만 있을 때도(아직 수락 전) 빌려준 글에 표시.
+/// 사용자 케이스: "lee가 빌려주겠다고 응답하면, 요청자가 수락 전이라도 lee의
+/// '내가 빌려준 글'에 보여야 함".
+#[sqlx::test(migrations = "./migrations")]
+async fn lent_filter_includes_pending_offers(pool: MySqlPool) {
+    let app = test_app(pool);
+    let (hong, request_id, _kim_offer, _lee_offer) = create_request_and_offers(&app).await;
+
+    // 아직 hong이 수락 X — kim, lee 둘 다 pending 상태
+    let kim = login_default(&app, "kim").await;
+    let lee = login_default(&app, "lee").await;
+
+    let (_, kim_list) = call(
+        &app,
+        Method::GET,
+        "/api/v1/requests?lent=true",
+        Some(&kim),
+        None,
+    )
+    .await;
+    let kim_items = kim_list["items"].as_array().unwrap();
+    assert_eq!(kim_items.len(), 1, "kim with pending offer should see request: {kim_list}");
+    assert_eq!(kim_items[0]["id"].as_u64(), Some(request_id));
+
+    let (_, lee_list) = call(
+        &app,
+        Method::GET,
+        "/api/v1/requests?lent=true",
+        Some(&lee),
+        None,
+    )
+    .await;
+    assert_eq!(lee_list["items"].as_array().unwrap().len(), 1, "lee with pending offer should see request: {lee_list}");
+
+    // hong은 작성자라 lent에 안 보임
+    let (_, hong_list) = call(
+        &app,
+        Method::GET,
+        "/api/v1/requests?lent=true",
+        Some(&hong),
+        None,
+    )
+    .await;
+    assert_eq!(hong_list["items"].as_array().unwrap().len(), 0);
+}
+
+/// lent=true 필터 — accepted 후의 동작. 거절된 offerer는 빠짐.
+/// PLAN.md §1.B "내가 빌려준 글" — 정식 매칭 시나리오.
+#[sqlx::test(migrations = "./migrations")]
+async fn lent_filter_shows_my_accepted_offers(pool: MySqlPool) {
+    let app = test_app(pool);
+    let (hong, request_id, kim_offer_id, _lee_offer_id) = create_request_and_offers(&app).await;
+
+    // hong이 kim의 offer 수락 → kim은 accepted offerer
+    let (status, _) = call(
+        &app,
+        Method::POST,
+        &format!("/api/v1/offers/{kim_offer_id}/accept"),
+        Some(&hong),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    // kim 시점: lent=true 시 hong의 글이 보여야 함
+    let kim = login_default(&app, "kim").await;
+    let (status, list) = call(
+        &app,
+        Method::GET,
+        "/api/v1/requests?lent=true",
+        Some(&kim),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let items = list["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1, "kim should see 1 lent request: {list}");
+    assert_eq!(items[0]["id"].as_u64(), Some(request_id));
+
+    // lee 시점: rejected (자동) — lent=true 시 빈 리스트
+    let lee = login_default(&app, "lee").await;
+    let (_, list) = call(
+        &app,
+        Method::GET,
+        "/api/v1/requests?lent=true",
+        Some(&lee),
+        None,
+    )
+    .await;
+    assert_eq!(list["items"].as_array().unwrap().len(), 0, "lee shouldn't see any lent: {list}");
+
+    // hong 시점 (작성자) — lent=true 시 빈 리스트 (hong은 빌려준 게 아님)
+    let (_, list) = call(
+        &app,
+        Method::GET,
+        "/api/v1/requests?lent=true",
+        Some(&hong),
+        None,
+    )
+    .await;
+    assert_eq!(list["items"].as_array().unwrap().len(), 0);
+}
+
+/// pending_offer_count가 list / detail 양쪽에 일관되게 노출되는지.
+/// 작성자(요청자)가 메인 페이지에서 "N명 응답" 칩을 볼 수 있는 핵심 보장.
+#[sqlx::test(migrations = "./migrations")]
+async fn pending_offer_count_visible_in_list_and_detail(pool: MySqlPool) {
+    let app = test_app(pool);
+    let (hong, request_id, _kim_offer, _lee_offer) = create_request_and_offers(&app).await;
+
+    // detail: hong (작성자) 시점 — count 2
+    let (status, detail) = call(
+        &app,
+        Method::GET,
+        &format!("/api/v1/requests/{request_id}"),
+        Some(&hong),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(detail["request"]["pending_offer_count"], 2);
+
+    // list: hong 본인 글에 응답 2건이 표시돼야 함
+    let (status, list) = call(
+        &app,
+        Method::GET,
+        "/api/v1/requests?mine=true",
+        Some(&hong),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let item = list["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["id"].as_u64() == Some(request_id))
+        .expect("hong's request in list");
+    assert_eq!(item["pending_offer_count"], 2);
 }
 
 /// accept 후 다른 offer를 또 accept 시도 → request가 이미 matched라 409.

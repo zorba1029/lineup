@@ -5,7 +5,8 @@ import { pickRandomNudge, type NudgeItem } from '@/lib/nudgePool';
  * 정적 추천 풀에서 랜덤 1건을 보여주는 nudge 배너.
  * 클릭 시 부모(MainPage)가 RequestModal을 프리필 값으로 연다.
  *
- * 페이지 mount마다 다른 추천 — useMemo([])로 lock.
+ * 디자인은 프로토타입 `.nudge-banner` 톤 — primary 그라데이션 배경 + 큰 흰 글씨 +
+ * 우측 흰 "빌리기" 칩. mount마다 랜덤 1건 (useMemo([])로 lock).
  */
 export interface NudgeBannerProps {
   onPick: (item: NudgeItem) => void;
@@ -18,15 +19,19 @@ export function NudgeBanner({ onPick }: NudgeBannerProps) {
     <button
       type="button"
       onClick={() => onPick(item)}
-      className="mx-4 mt-3 flex w-[calc(100%-2rem)] items-center justify-between rounded-lnb bg-green-light px-4 py-3 text-left shadow-lnb-sm transition-colors hover:bg-green/10 active:bg-green/20"
+      className="mx-4 mt-3 flex w-[calc(100%-2rem)] items-center justify-between gap-3 rounded-lnb bg-gradient-to-br from-primary to-[#7C8BFF] px-4 py-4 text-left shadow-lnb transition-transform active:scale-[0.99]"
     >
-      <span className="flex flex-col gap-0.5">
-        <span className="text-sm font-bold text-text">
-          혹시 <span className="text-green">{item.name}</span> 필요하지 않으세요?
+      <span className="flex min-w-0 flex-col gap-1">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+          이웃이 빌려드려요
         </span>
-        <span className="text-xs text-sub">눌러서 같은 라인 이웃에게 부탁해보기</span>
+        <span className="text-lg font-extrabold leading-snug text-white">
+          지금 <span className="text-yellow">{item.name}</span> 빌려볼까요?
+        </span>
       </span>
-      <span className="text-2xl text-green">→</span>
+      <span className="flex-shrink-0 rounded-lnb-sm bg-white px-3 py-2 text-sm font-extrabold text-text shadow-lnb-sm">
+        빌리기
+      </span>
     </button>
   );
 }
