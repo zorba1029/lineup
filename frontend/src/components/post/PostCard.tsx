@@ -71,8 +71,13 @@ export function PostCard({ post, isMine }: Props) {
       />
 
       {/* 줄 간격은 프로토타입과 동일하게 mb-1(4px) / mb-1(3-4px) / mb-2(7-8px) */}
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-1 flex items-center gap-1.5">
         <span className={`text-sm font-bold ${label.cls}`}>{label.text}</span>
+        {post.status === 'open' && post.pending_offer_count > 0 ? (
+          <span className="rounded-lnb-sm bg-primary px-2 py-0.5 text-sm font-bold text-white shadow-lnb-sm">
+            {post.pending_offer_count}명 응답
+          </span>
+        ) : null}
       </div>
 
       <div className="mb-1 flex items-center gap-2">

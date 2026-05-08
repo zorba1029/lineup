@@ -256,23 +256,40 @@ function OwnerView({
           ) : null}
         </Section>
 
-        <Section title={`요청 현황 (${visibleOffers.length}건)`}>
-          {visibleOffers.length === 0 ? (
-            <p className="py-2 text-sm text-sub">
-              아직 빌려주겠다는 이웃이 없어요
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2 py-2">
-              {visibleOffers.map((offer) => (
+        <Section title="요청 현황">
+          <div className="flex flex-col gap-2 py-2">
+            {/* 빌리기 요청인 — 작성자 (본인) */}
+            <ParticipantBadge
+              role="빌리기 요청인"
+              dong={request.author.dong}
+              unit={request.author.unit}
+              name={request.author.name}
+              isMe
+              tone="primary"
+            />
+
+            {/* 빌려주기 응답 — offer 리스트 */}
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sub">
+                빌려주기 응답
+              </span>
+              <span className="text-xs text-sub">{visibleOffers.length}건</span>
+            </div>
+            {visibleOffers.length === 0 ? (
+              <p className="py-2 text-sm text-sub">
+                아직 빌려주겠다는 이웃이 없어요
+              </p>
+            ) : (
+              visibleOffers.map((offer) => (
                 <OwnerOfferCard
                   key={offer.id}
                   offer={offer}
                   requestId={request.id}
                   requestStatus={request.status}
                 />
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </Section>
 
         {!isLocked ? (
@@ -428,6 +445,40 @@ function OwnerOfferCard({
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** 거래 참여자 정보 카드 — 역할 라벨 + 동·호수·이름. */
+function ParticipantBadge({
+  role,
+  dong,
+  unit,
+  name,
+  isMe,
+  tone,
+}: {
+  role: string;
+  dong: string;
+  unit: string;
+  name: string;
+  isMe?: boolean;
+  tone: 'primary' | 'green';
+}) {
+  const cls =
+    tone === 'green'
+      ? 'border-green/40 bg-green-light/60'
+      : 'border-primary/30 bg-primary-light/40';
+  const labelCls = tone === 'green' ? 'text-green' : 'text-primary';
+  return (
+    <div className={`flex flex-col gap-0.5 rounded-lnb-sm border px-3 py-2 ${cls}`}>
+      <span className={`text-[11px] font-bold uppercase tracking-wider ${labelCls}`}>
+        {role}
+      </span>
+      <span className="text-sm font-bold text-text">
+        {dong} {unit} · {name}
+        {isMe ? <span className="ml-1.5 text-xs font-bold text-primary">(본인)</span> : null}
+      </span>
     </div>
   );
 }

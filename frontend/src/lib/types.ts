@@ -66,6 +66,8 @@ export interface RequestPublic {
   expires_at: string;
   created_at: string;
   author: RequestAuthor;
+  /** 이 글에 대기 중인 offer 수 — 메인 카드의 "N명 응답" 칩 표시용. */
+  pending_offer_count: number;
 }
 
 export interface RequestListResponse {
@@ -103,11 +105,12 @@ export interface OfferPublic {
  * GET /api/v1/requests/:id 응답.
  * - 작성자: 자기 글의 모든 offer (cancelled 제외)
  * - 이웃: 자기가 등록한 offer만
+ *
+ * pending_offer_count는 `request.pending_offer_count`로 통일됨 (list/detail 공통).
  */
 export interface RequestDetailResponse {
   request: RequestPublic;
   offers: OfferPublic[];
-  pending_offer_count: number;
 }
 
 /**

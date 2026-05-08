@@ -48,17 +48,18 @@ pub struct ListResponse {
     pub items: Vec<RequestPublic>,
 }
 
-/// 상세 응답: request + 표시용 offer 리스트 + pending offer 총 개수.
+/// 상세 응답: request + 표시용 offer 리스트.
+/// pending_offer_count는 `request.pending_offer_count`로 통일됨 (list/detail 공통).
 /// 작성자/이웃에 따라 offers 가시성과 phone 노출이 다르다.
 #[derive(Debug, Serialize)]
 pub struct DetailResponse {
     pub request: RequestPublic,
     pub offers: Vec<OfferPublic>,
-    pub pending_offer_count: i64,
 }
 
 // 모든 SELECT가 공유하는 컬럼 + JOIN. 쿼리 끝에 추가 WHERE를 이어 붙여 사용.
-const SELECT_BASE: &str = r#"
+// pending_offer_count는 correlated subquery로 항상 같이 계산됨 (N+1 방지).
+pub const SELECT_BASE: &str = r#"
 SELECT
   r.id, r.user_id, r.name, r.category, r.description,
   r.urgent, r.status, r.start_time, r.expires_at, r.created_at,
@@ -66,7 +67,9 @@ SELECT
   u.dong      AS author_dong,
   u.unit      AS author_unit,
   u.line_no   AS author_line_no,
-  u.phone     AS author_phone
+  u.phone     AS author_phone,
+  (SELECT COUNT(*) FROM offers o WHERE o.request_id = r.id AND o.status = 'pending')
+    AS pending_offer_count
 FROM requests r
 INNER JOIN users u ON u.id = r.user_id
 WHERE u.dong = ? AND u.line_no = ?
@@ -79,15 +82,24 @@ async fn list_requests(
     auth: AuthUser,
     Query(q): Query<ListQuery>,
 ) -> Result<Json<ListResponse>, AppError> {
-    // M3: lent=true는 아직 offer 테이블이 없어 항상 빈 리스트.
-    if q.lent.unwrap_or(false) {
-        return Ok(Json(ListResponse { items: vec![] }));
-    }
+    let mine = q.mine.unwrap_or(false);
+    let lent = q.lent.unwrap_or(false);
 
     let mut sql = String::from(SELECT_BASE);
     sql.push_str(" AND r.status <> 'cancelled'");
-    if q.mine.unwrap_or(false) {
+    if mine {
         sql.push_str(" AND r.user_id = ?");
+    }
+    if lent {
+        // 내가 빌려주겠다고 응답한 글들 — pending(요청자가 아직 수락 안 함) + accepted(매칭됨).
+        // 자기가 취소했거나 거절된 offer는 제외.
+        sql.push_str(
+            " AND EXISTS ( \
+               SELECT 1 FROM offers o \
+               WHERE o.request_id = r.id AND o.user_id = ? \
+                 AND o.status IN ('pending', 'accepted') \
+             )",
+        );
     }
     if q.since.is_some() {
         sql.push_str(" AND r.updated_at >= ?");
@@ -97,7 +109,10 @@ async fn list_requests(
     let mut query = sqlx::query_as::<_, RequestWithAuthorRow>(&sql)
         .bind(&auth.dong)
         .bind(&auth.line_no);
-    if q.mine.unwrap_or(false) {
+    if mine {
+        query = query.bind(auth.user_id);
+    }
+    if lent {
         query = query.bind(auth.user_id);
     }
     if let Some(since) = q.since {
@@ -163,11 +178,6 @@ async fn get_request(
     .fetch_all(&state.db)
     .await?;
 
-    let pending_offer_count = all_offers
-        .iter()
-        .filter(|o| o.status == "pending")
-        .count() as i64;
-
     let matched_offerer_id: Option<u64> = all_offers
         .iter()
         .find(|o| o.status == "accepted")
@@ -198,7 +208,6 @@ async fn get_request(
     Ok(Json(DetailResponse {
         request: request_public,
         offers,
-        pending_offer_count,
     }))
 }
 

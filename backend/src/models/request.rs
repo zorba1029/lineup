@@ -6,6 +6,7 @@ use sqlx::FromRow;
 use validator::Validate;
 
 /// `requests JOIN users` 결과를 한 row에 평탄화. 작성자 정보 컬럼은 SQL에서 alias.
+/// `pending_offer_count`는 SQL의 correlated subquery로 동시에 가져옴 (N+1 방지).
 #[derive(Debug, Clone, FromRow)]
 pub struct RequestWithAuthorRow {
     pub id: u64,
@@ -23,6 +24,7 @@ pub struct RequestWithAuthorRow {
     pub author_unit: String,
     pub author_line_no: String,
     pub author_phone: String,
+    pub pending_offer_count: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -48,10 +50,12 @@ pub struct RequestPublic {
     pub expires_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub author: AuthorInfo,
+    /// 이 글에 달린 pending offer 수 — list/detail 모두 동일 필드. UI의 "N명 응답" 표시용.
+    pub pending_offer_count: i64,
 }
 
 impl RequestWithAuthorRow {
-    /// `include_phone=true`는 거래 성사 후(matched)에만. PLAN.md §10.
+    /// `include_phone=true`는 거래 성사 후(matched) 양 당사자에게만 노출. PLAN.md §10.
     pub fn into_public(self, include_phone: bool) -> RequestPublic {
         RequestPublic {
             id: self.id,
@@ -71,6 +75,7 @@ impl RequestWithAuthorRow {
                 line_no: self.author_line_no,
                 phone: if include_phone { Some(self.author_phone) } else { None },
             },
+            pending_offer_count: self.pending_offer_count,
         }
     }
 }
@@ -97,7 +102,7 @@ pub struct UpdateRequestBody {
 mod tests {
     use super::*;
 
-    fn sample_row() -> RequestWithAuthorRow {
+    fn sample_row(pending: i64) -> RequestWithAuthorRow {
         RequestWithAuthorRow {
             id: 1,
             user_id: 7,
@@ -114,18 +119,25 @@ mod tests {
             author_unit: "101호".into(),
             author_line_no: "01".into(),
             author_phone: "010-1234-5678".into(),
+            pending_offer_count: pending,
         }
     }
 
     #[test]
     fn hides_phone_by_default() {
-        let p = sample_row().into_public(false);
+        let p = sample_row(0).into_public(false);
         assert!(p.author.phone.is_none());
     }
 
     #[test]
     fn includes_phone_when_requested() {
-        let p = sample_row().into_public(true);
+        let p = sample_row(0).into_public(true);
         assert_eq!(p.author.phone.as_deref(), Some("010-1234-5678"));
+    }
+
+    #[test]
+    fn pending_count_propagates_to_public() {
+        let p = sample_row(3).into_public(false);
+        assert_eq!(p.pending_offer_count, 3);
     }
 }

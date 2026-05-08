@@ -5,8 +5,9 @@ import type { RequestDetailResponse } from '@/lib/types';
 
 /**
  * GET /api/v1/requests/:id
- * M4부터 응답이 wrapper 형태:
- *   { request, offers, pending_offer_count }
+ * 응답 wrapper 형태:
+ *   { request, offers }
+ * pending_offer_count는 `request` 내부로 이동 (list/detail 공통 필드).
  * 404/403은 ApiError로 throw — 컴포넌트가 query.error를 보고 처리.
  *
  * 1초 polling — 작성자/이웃 모두 새 offer 등록·수락·거절을 빠르게 감지.

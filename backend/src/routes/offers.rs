@@ -22,6 +22,7 @@ use crate::models::offer::{
     CreateOfferBody, OfferPublic, OfferWithOffererRow, UpdateOfferBody,
 };
 use crate::models::request::{RequestPublic, RequestWithAuthorRow};
+use crate::routes::requests::SELECT_BASE as SELECT_REQUEST_BASE;
 use crate::AppState;
 
 pub fn requests_scoped_router() -> Router<AppState> {
@@ -68,20 +69,7 @@ INNER JOIN users    ru ON ru.id = r.user_id
 WHERE ru.dong = ? AND ru.line_no = ?
 "#;
 
-/// request + 작성자 정보 + 격리. (routes::requests의 SELECT_BASE와 동일 형태.)
-const SELECT_REQUEST_BASE: &str = r#"
-SELECT
-  r.id, r.user_id, r.name, r.category, r.description,
-  r.urgent, r.status, r.start_time, r.expires_at, r.created_at,
-  u.name      AS author_name,
-  u.dong      AS author_dong,
-  u.unit      AS author_unit,
-  u.line_no   AS author_line_no,
-  u.phone     AS author_phone
-FROM requests r
-INNER JOIN users u ON u.id = r.user_id
-WHERE u.dong = ? AND u.line_no = ?
-"#;
+// request 격리 + 작성자 정보 + pending_offer_count는 `routes::requests::SELECT_BASE` 재사용.
 
 // ─────────────────────────── Handlers ───────────────────────────
 

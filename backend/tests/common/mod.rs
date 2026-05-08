@@ -81,6 +81,14 @@ pub async fn signup_default(app: &Router, username: &str, unit: &str) -> String 
     json["accessToken"].as_str().unwrap().to_string()
 }
 
+/// 이미 가입된 사용자로 로그인해서 새 토큰을 얻음. signup_default와 같은 비밀번호 가정.
+pub async fn login_default(app: &Router, username: &str) -> String {
+    let body = json!({ "username": username, "password": "test1234" });
+    let (status, json) = call(app, Method::POST, "/api/v1/auth/login", None, Some(&body)).await;
+    assert_eq!(status, StatusCode::OK, "login '{username}' failed: {json}");
+    json["accessToken"].as_str().unwrap().to_string()
+}
+
 /// 다른 라인(`line_no`)에 사용자 등록.
 pub async fn signup_other_line(
     app: &Router,
