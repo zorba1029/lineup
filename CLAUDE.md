@@ -30,7 +30,7 @@
 | DB       | MySQL 8 (Docker) |
 | 빌드     | pnpm (FE), cargo (BE) |
 
-## 4. 디렉토리 (현재 = M6 완료, 다음 phase = AWS 배포)
+## 4. 디렉토리 (현재 = M6 완료 + post-M6 폴리시, 다음 phase = AWS 배포)
 
 ```
 impl/
@@ -81,8 +81,10 @@ impl/
         │   ├── auth/RequireAuth.tsx           # ✅ M2
         │   ├── layout/{MobileShell,Header}    # ✅ M1/M3
         │   ├── modals/{Confirm,Request,MyOffer}# ✅ M3~M4
-        │   ├── post/{PostCard,PostList,FilterChips,Fab,StatusBadge} # ✅ M3
-        │   ├── nudge/{NewPostBanner,NudgeBanner}  # ✅ M5
+        │   ├── post/{PostCard,PostList,FilterTabs,Fab,StatusBadge} # ✅ M3 + post-M6 폴리시
+        │   │   # PostCard: 좌측 status bar / 상단 pill / 응답 카운트 칩 / blinking urgent dot
+        │   │   # FilterTabs: 'all'/'mine'/'lent' 3-tab segmented (이전 FilterChips 토글에서 교체)
+        │   ├── nudge/{NewPostBanner,NudgeBanner}  # ✅ M5 + post-M6 (NudgeBanner prototype 톤 재디자인)
         │   ├── sheets/OfferBottomSheet.tsx    # ✅ M4 (2-step)
         │   └── timer/CountdownTimer.tsx       # ✅ M5 (1초 갱신, 1시간 미만 강조)
         ├── routes/                             # ✅ 7개 모두 구현됨
@@ -166,6 +168,15 @@ curl http://localhost:8080/readyz     # → ready (DB 연결 정상)
 - TypeScript/Rust 모두 strict. `any` / `unwrap()` 지양.
 - 한글 UI 텍스트는 컴포넌트 안에 인라인 ─ M6 전까지 i18n 도입 X.
 - 시간 포맷: 서버는 ISO 8601 UTC, 프론트가 dayjs/date-fns로 "방금 전/N분 전" 변환.
+
+### 6.4 Post-M6 폴리시 결정 (브라우저 데모 후)
+- **카테고리 칩 단일 톤**: 6색 분기 → 모두 `bg-primary-light` + `text-primary`. 인지 부담 ↓.
+- **`pending_offer_count` 위치**: list/detail 공통 필드로 `RequestPublic`에 통합. `DetailResponse`에서 제거. SQL은 correlated subquery (N+1 회피).
+- **`lent` 필터 의미**: `pending` + `accepted` 모두 포함 (요청자 수락 전 응답도 보여야 함). `cancelled`/`rejected`는 제외.
+- **메인 필터는 3-tab segmented control** (`'all' | 'mine' | 'lent'` 상호 배타). 이전 두 개 독립 토글에서 교체.
+- **PostCard 상태 indicator**: 좌측 세로 6px bar + 상단 pill 라벨 + 상단 응답 카운트. 메타 row(카테고리/급해요/시간/위치)는 정보용으로 분리.
+- **MobileShell 배경**을 `bg-bg`로 설정해 카드/헤더의 `bg-card`(흰색)가 떠보이게.
+- **prototype 디자인 톤 존중** — 폰트/padding/줄 간격은 prototype 값(11-15px / 3-9px / 3-7px) 기반.
 
 ## 7. 위험 포인트 (PLAN.md §10 요약)
 

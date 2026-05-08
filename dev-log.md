@@ -455,6 +455,47 @@ DATABASE_URL=mysql://root:dev@localhost:3306/linenb cargo test
 
 ---
 
+## Post-M6 폴리시 (브라우저 데모 후 사용자·기획자 피드백)
+
+M6 머지 직후 실제 데모를 돌리며 받은 UX 피드백을 작은 branch들로 정리. 마일스톤이라기보다 iteration. `--no-ff` 머지 + branch 보존 정책 적용.
+
+### branch `fix/matched-card-indicator`
+PostCard 시각 폴리시 묶음 + Cargo `default-run`.
+
+- **좌측 세로 status bar** (6px, `rounded-l-lnb`) — open=primary / matched=green / expired·cancelled=sub. 멀리서 카드 상태 즉시 인지.
+- **상단 status 라벨**을 status별로 교체. matched/expired/cancelled은 진한 pill (bg-green / bg-sub + 흰 글씨 + shadow). open은 색만 있는 텍스트 ("이웃이 찾고 있어요"). 하단 중복 배지 제거.
+- **메타 row 순서**를 prototype과 일치: 카테고리 / 급해요(blinking) / 시간 / 작성자 위치. 시간을 top-right에서 메타로 이동.
+- **폰트·padding** 정렬: `text-[11px]` → `text-sm`(14px), `px-2.5 py-1` → `px-2 py-0.5` (prototype 9/3px 톤).
+- **줄 간격** 균일 `gap-2` 제거 → 명시적 `mb-1`/`mb-1`/`mb-2` (prototype 4/3/7px 비율).
+- **카드 padding** `p-4` → `p-3.5` + `pl-4` (좌측 bar 여유).
+- **MobileShell 배경**을 `bg-card` → `bg-bg`(연한 회색-파랑) — 카드의 흰색이 떠보임.
+- **`blink-soft` keyframe** 추가 (`tailwind.config.ts`). 사이클 0~70%은 full opacity, 85%에서 0.25 dim, 100%에 복귀. 2.0s ease-in-out infinite — 차분한 톤. 급해요 dot에 적용.
+- **카테고리 칩** 6개 모두 동일한 primary 톤(`bg-primary-light` + `text-primary`)으로 통일 — 시각적 노이즈 감소.
+- **Cargo.toml** `default-run = "linenb-backend"` — bin/seed 추가 후 `cargo run` 모호성 해소.
+
+### branch `feat/pending-offer-count`
+메인 페이지·상세 페이지 정보 명확화 + 필터 UX 재설계.
+
+- **`pending_offer_count`를 `RequestPublic`로 통합** — list / detail 공통 필드. SQL은 correlated subquery로 N+1 회피. `DetailResponse`에서 별도 필드 제거.
+- **`lent` 필터 의미 확장**: 이전 `accepted`만 → `pending` + `accepted`. "요청자 수락 전이라도 내 응답 글이 보여야 함" 사용자 의도 반영. `cancelled` / `rejected`는 제외.
+- **`PostCard`의 "N명 응답" 칩**을 메타 row → 상단 status 라벨 옆으로 이동. 거래완료/거래종료처럼 status indicator 영역에 그룹화. `bg-primary` + 흰 글씨.
+- **`NudgeBanner` 재디자인** (prototype 톤): `from-primary to-#7C8BFF` 그라데이션, 큰 흰 글씨(`text-lg`/`extrabold`) "지금 [item] 빌려볼까요?", 아이템명 노란색(`text-yellow`) 강조, 우측 흰 "빌리기" 칩.
+- **`FilterChips` → `FilterTabs`**: 두 개의 독립 토글 → `'all' | 'mine' | 'lent'` 3-tab segmented control. 활성 탭 `bg-primary` + 흰 글씨 + shadow. 모드 상호 배타적, default `'all'`. MainPage 상태도 `[mine, lent]` 두 boolean → `filter` 단일 상태로 단순화. 탭 자체가 라벨 역할이라 아래 중복 타이틀 row 제거.
+- **`ParticipantBadge`** (RequestDetailPage OwnerView): "요청 현황" 섹션에 `빌리기 요청인` (작성자 본인) 정보 카드를 명시적으로 추가. 그 아래 `빌려주기 응답` 라벨 + offer 카드들. 거래 참여자 가시성 향상.
+
+### Post-M6 검증
+- `cargo test`: **46/46** (단위 31 + 통합 15)
+- `cargo clippy --all-targets -- -D warnings`: clean
+- `pnpm typecheck` / `pnpm build`: clean (gzip ~103KB)
+- 사용자 브라우저 검증 ✅: pending count / lent 필터 (pending 시점) / 3-tab UI / nudge banner / status pill / blink 톤 / participant badge 모두 OK
+
+### Post-M6 학습
+- **머지 후 branch 보존 정책 확정** — 2026-05-07 M5 머지 시점에 GitHub PR과 로컬 `git merge --no-ff`가 동시 발생해 머지 커밋 충돌. 이후로는 Claude가 직접 로컬 `git merge --no-ff` + push, branch는 로컬·원격 모두 보존 (PR 히스토리·branch 이름이 남아 추적 좋음). 메모리에 기록 (`feedback_branch_workflow.md`).
+- **카테고리별 색은 시각적 노이즈** — 6색 분기보다 단일 primary 톤이 인지 부담을 줄임.
+- **prototype 디자인 톤 존중** — 폰트/padding/줄 간격은 prototype 값에 가깝게 정렬할수록 자연스러움. CSS 토큰만 새로 설계하면 prototype 의도와 멀어지기 쉬움.
+
+---
+
 ## 수평 결정 사항 (모든 M에 적용)
 
 ### TDD 적용 범위
@@ -510,11 +551,11 @@ M3에서 `RequestPublic`을 처음에 camelCase로 작성했다가 FE가 이미 
 
 | 영역 | 파일 수 (대략) | 테스트 수 |
 |---|---|---|
-| 백엔드 | 18 (auth 3 / models 3 / routes 4 / util 2 / tasks 1 / bin/seed 1 / db·config·error·main·lib) | **42** (단위 30 + 통합 12) |
-| 프론트엔드 | 36 (lib 10 / features 9 / components 15 / routes 7) | 0 |
+| 백엔드 | 18 (auth 3 / models 3 / routes 4 / util 2 / tasks 1 / bin/seed 1 / db·config·error·main·lib) | **46** (단위 31 + 통합 15) |
+| 프론트엔드 | 36 (lib 10 / features 9 / components 15 / routes 7 — FilterChips→FilterTabs rename) | 0 |
 | 마이그레이션 | 1 | — |
 | 백엔드 테스트 인프라 | 4 (tests/common + 3 flow files) | — |
 
-테스트 진행: 21(M2) → 28(+M3) → 30(+M4) → 30(M5) → **42(+M6 통합 12)**.
+테스트 진행: 21(M2) → 28(+M3) → 30(+M4) → 30(M5) → 42(+M6 통합 12) → **46(+post-M6 폴리시 unit 1 + integration 3)**.
 
-빌드 사이즈(FE): 305KB(M2) → 324KB(+M3) → 343KB(+M4) → 347KB(+M5) → **347KB(M6, FE 변경 없음)**. gzip 93→98→101→102→102KB.
+빌드 사이즈(FE): 305KB(M2) → 324KB(+M3) → 343KB(+M4) → 347KB(+M5) → 347KB(M6) → **348KB(post-M6)**. gzip 93→98→101→102→102→103KB.
