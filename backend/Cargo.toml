@@ -3,6 +3,9 @@ name = "linenb-backend"
 version = "0.1.0"
 edition = "2021"
 publish = false
+# 멀티 바이너리 (linenb-backend, seed)에서 `cargo run`이 어느 걸 실행할지 명시.
+# 서버는 그냥 `cargo run`, 시드는 `cargo run --bin seed`.
+default-run = "linenb-backend"
 
 [dependencies]
 tokio              = { version = "1", features = ["full"] }
