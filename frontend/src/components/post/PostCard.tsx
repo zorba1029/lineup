@@ -102,7 +102,15 @@ export function PostCard({ post, isMine }: Props) {
         </span>
         {post.urgent ? (
           <span className="inline-flex items-center gap-1.5 rounded-lnb-sm bg-accent/10 px-2 py-0.5 text-sm font-bold text-accent">
-            <span className="h-2 w-2 rounded-full bg-accent animate-blink-soft" />
+            {/* Tailwind JIT가 string concat으로 만든 클래스를 누락하는 경우가 있어
+                완전한 클래스 문자열 ternary로 분기. status='open'일 때만 blink. */}
+            <span
+              className={
+                post.status === 'open'
+                  ? 'h-2 w-2 rounded-full bg-accent animate-blink-soft'
+                  : 'h-2 w-2 rounded-full bg-accent'
+              }
+            />
             급해요
           </span>
         ) : null}
