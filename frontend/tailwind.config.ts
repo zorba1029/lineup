@@ -47,15 +47,15 @@ export default {
         'lnb-sm': '0 2px 8px rgba(0,0,0,0.07)',
       },
       keyframes: {
-        // 프로토타입 .urgent-dot blink. 사이클의 대부분(0~70%)을 full opacity로
-        // 머물고 80% 부근에서 짧게 0.25로 dim. 너무 자주 깜빡이지 않는 차분한 톤.
+        // urgent-dot blink. 50/50 cadence ─ 꺼진 구간에도 어둡게 빨강이 남아
+        // "켜짐 ↔ 어두운 켜짐"으로 자연스러운 깜빡임.
         'blink-soft': {
-          '0%, 70%, 100%': { opacity: '1' },
-          '85%': { opacity: '0.25' },
+          '0%, 49%': { opacity: '1' },
+          '50%, 100%': { opacity: '0.3' },
         },
       },
       animation: {
-        'blink-soft': 'blink-soft 2s ease-in-out infinite',
+        'blink-soft': 'blink-soft 1.4s steps(1, end) infinite',
       },
     },
   },
