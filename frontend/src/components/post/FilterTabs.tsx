@@ -1,8 +1,8 @@
 /**
  * 메인 리스트 필터 — 3-tab segmented control.
  * - all  : 같은 라인의 전체 게시글
- * - mine : 내가 작성한 요청만
- * - lent : 내가 빌려주겠다고 응답한 글만 (pending + accepted)
+ * - mine : 내가 작성한 요청 ("나의 요청")
+ * - lent : 내가 빌려주겠다고 응답한 글 ("나의 수락", pending + accepted)
  *
  * 세 모드는 상호 배타적. 이전 두 개의 독립 토글에서 의미 명확성을 위해 탭으로 변경.
  */
@@ -18,8 +18,8 @@ interface Props {
 
 const TABS: ReadonlyArray<{ value: FilterMode; label: string }> = [
   { value: 'all', label: '전체' },
-  { value: 'mine', label: '내 글 보기' },
-  { value: 'lent', label: '내가 빌려준 글' },
+  { value: 'mine', label: '나의 요청' },
+  { value: 'lent', label: '나의 수락' },
 ];
 
 export function FilterTabs({ mode, onChange, count }: Props) {

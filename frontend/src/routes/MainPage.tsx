@@ -47,9 +47,9 @@ export function MainPage() {
   const items = requestsQuery.data?.items ?? [];
   const emptyText =
     filter === 'mine'
-      ? '아직 작성한 글이 없어요'
+      ? '아직 요청한 글이 없어요'
       : filter === 'lent'
-        ? '빌려준 글이 없어요'
+        ? '아직 수락한 요청이 없어요'
         : '아직 게시글이 없어요';
 
   return (
