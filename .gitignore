@@ -3,6 +3,16 @@
 .env.local
 .env.*.local
 
+# infra/deploy 전체: github public 레포라 시크릿(RDS pw / JWT_SECRET / DuckDNS token /
+# .pem / terraform.tfstate 등)이 노출될 위험. 통째로 untrack.
+infra/
+deploy-backend.sh
+deploy-frontend.sh
+
+# vite 빌드 시점 환경변수 (운영 URL 등)
+.env.production
+.env.development
+
 # docker mysql data
 .data/
 
@@ -14,6 +24,9 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Claude Code: 머신마다 다른 local 권한 설정. 공유 불필요.
+.claude/settings.local.json
 
 # 임시/스크래치
 무제.pdf
