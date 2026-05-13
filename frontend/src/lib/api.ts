@@ -1,7 +1,8 @@
 import { authStore } from './auth';
 import type { ApiErrorBody, ApiErrorCode, RefreshResponse } from './types';
 
-const API_BASE = '/api/v1';
+// dev: vite proxy(/api → axum). prod: VITE_API_BASE='https://api.xxx.duckdns.org/api/v1'
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api/v1';
 
 export class ApiError extends Error {
   status: number;
