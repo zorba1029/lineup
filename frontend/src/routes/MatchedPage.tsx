@@ -1,9 +1,10 @@
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/lib/auth';
+import { DetailHeader } from '@/components/layout/DetailHeader';
 import type { MatchedResponse } from '@/lib/types';
 
 /**
- * 화면 12 (거래 성사). PLAN.md §1.E.
+ * 화면 12 (거래 성사). Wanted DS lu-matched 톤.
  * 진입 경로:
  *   navigate('/matched', { state: { matched: MatchedResponse } })
  * URL 직접 접근 → / 로 리다이렉트.
@@ -17,7 +18,6 @@ export function MatchedPage() {
   const navigate = useNavigate();
   const currentUser = useAuthStore((s) => s.user);
 
-  // 새로고침/뒤로가기 등으로 state가 비어있으면 아래에서 / 로 리다이렉트
   const state = location.state as LocationState | null;
   const matched = state?.matched;
 
@@ -27,99 +27,82 @@ export function MatchedPage() {
 
   const { request, offer } = matched;
   const isAuthor = request.author.id === currentUser.id;
-
-  // 상대방 정보 결정
   const partner = isAuthor ? offer.offerer : request.author;
-  const me = isAuthor ? request.author : offer.offerer;
-
   const partnerPhone = partner.phone;
 
-  const handleClose = () => {
-    navigate('/', { replace: true });
-  };
+  const goHome = () => navigate('/', { replace: true });
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col items-center gap-5 px-5 pb-10 pt-12">
-        <div className="text-5xl">🎉</div>
-        <h1 className="text-center text-2xl font-black text-text">
+      <DetailHeader title="거래 성사" onBack={goHome} />
+
+      {/* matched-hero: 72×72 positive 원형 + 흰 check + 그림자 */}
+      <div className="flex flex-col items-center gap-3 px-4 pb-2 pt-8 text-center">
+        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-wd-positive text-white shadow-[0_6px_20px_rgba(0,191,64,0.30)]">
+          <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8">
+            <path
+              d="M5 12l4.5 4.5L19 7"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <h1 className="mt-1 font-display text-[22px] font-extrabold tracking-tight text-wd-fg-primary">
           거래가 성사되었어요!
         </h1>
-        <p className="text-center text-sm text-sub">
-          같은 라인 이웃과의 거래가 매칭됐어요.
-          <br />
+        <p className="text-[13px] leading-relaxed text-wd-fg-tertiary">
+          같은 라인 이웃과의 거래가 매칭됐어요. <br />
           서로 연락해서 편하게 나눠요.
         </p>
+      </div>
 
-        <section className="flex w-full flex-col gap-2 rounded-lnb bg-card p-4 shadow-lnb-sm">
-          <Row label="물건">
-            <span className="text-sm font-bold text-text">{request.name}</span>
-          </Row>
-          <Row label="카테고리">
-            <span className="text-sm text-text">{request.category}</span>
-          </Row>
-        </section>
+      <div className="flex flex-1 flex-col gap-3 px-4 pb-10 pt-4">
+        <Section title="물건">
+          <Row label="물건 이름">{request.name}</Row>
+          <Row label="카테고리">{request.category}</Row>
+        </Section>
 
-        <section className="flex w-full flex-col gap-2 rounded-lnb bg-card p-4 shadow-lnb-sm">
-          <h2 className="text-sm font-bold text-text">내 정보</h2>
+        <Section title={isAuthor ? '빌려주는 이웃' : '요청한 이웃'}>
           <Row label="동·호수">
-            <span className="text-sm font-bold text-text">
-              {me.dong} {me.unit}
-            </span>
+            {partner.dong} {partner.unit}
           </Row>
-          <Row label="이름">
-            <span className="text-sm text-text">{me.name}</span>
-          </Row>
-        </section>
-
-        <section className="flex w-full flex-col gap-2 rounded-lnb bg-card p-4 shadow-lnb-sm">
-          <h2 className="text-sm font-bold text-text">
-            {isAuthor ? '빌려주는 이웃' : '요청한 이웃'}
-          </h2>
-          <Row label="동·호수">
-            <span className="text-sm font-bold text-text">
-              {partner.dong} {partner.unit}
-            </span>
-          </Row>
-          <Row label="이름">
-            <span className="text-sm text-text">{partner.name}</span>
-          </Row>
-          {partnerPhone ? (
-            <Row label="연락처">
+          <Row label="이름">{partner.name}</Row>
+          <Row label="연락처">
+            {partnerPhone ? (
               <a
                 href={`tel:${partnerPhone}`}
-                className="text-sm font-bold text-primary"
+                className="inline-flex items-center gap-1 text-wd-primary"
               >
+                <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3">
+                  <path
+                    d="M5 4h3l2 5-2.5 1.5a11 11 0 005 5L14 13l5 2v3a2 2 0 01-2 2 17 17 0 01-15-15 2 2 0 012-2z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
                 {partnerPhone}
               </a>
-            </Row>
-          ) : (
-            <Row label="연락처">
-              <span className="text-sm text-sub">정보 없음</span>
-            </Row>
-          )}
-        </section>
+            ) : (
+              <span className="font-normal text-wd-fg-tertiary">정보 없음</span>
+            )}
+          </Row>
+        </Section>
 
-        <section className="flex w-full flex-col gap-2 rounded-lnb bg-card p-4 shadow-lnb-sm">
-          <h2 className="text-sm font-bold text-text">시간 · 장소</h2>
-          <Row label="대여 시간">
-            <span className="text-sm text-text">{offer.rental_time}</span>
-          </Row>
-          <Row label="반납 시간">
-            <span className="text-sm text-text">{offer.return_time}</span>
-          </Row>
-          <Row label="대여 장소">
-            <span className="text-sm text-text">{offer.rental_place}</span>
-          </Row>
-          <Row label="반납 장소">
-            <span className="text-sm text-text">{offer.return_place}</span>
-          </Row>
-        </section>
+        <Section title="시간 · 장소">
+          <Row label="대여 시간">{offer.rental_time}</Row>
+          <Row label="반납 시간">{offer.return_time}</Row>
+          <Row label="대여 장소">{offer.rental_place}</Row>
+          <Row label="반납 장소">{offer.return_place}</Row>
+        </Section>
 
         <button
           type="button"
-          onClick={handleClose}
-          className="mt-2 h-12 w-full rounded-lnb bg-primary font-bold text-white shadow-lnb-sm transition-colors hover:bg-primary-dark"
+          onClick={goHome}
+          className="mt-1 inline-flex h-12 items-center justify-center rounded-xl bg-wd-primary text-[15px] font-bold text-white transition-colors hover:bg-wd-primary-hover active:scale-[0.98]"
         >
           확인
         </button>
@@ -128,17 +111,30 @@ export function MatchedPage() {
   );
 }
 
-function Row({
-  label,
+function Section({
+  title,
   children,
 }: {
-  label: string;
+  title: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-border py-2 first-of-type:border-t-0">
-      <span className="text-sm text-sub">{label}</span>
-      <div className="text-right">{children}</div>
+    <section className="rounded-2xl border border-wd-border-default bg-wd-bg-primary p-4">
+      <h2 className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.04em] text-wd-fg-tertiary">
+        {title}
+      </h2>
+      <div className="flex flex-col">{children}</div>
+    </section>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-wd-border-subtle py-2.5 first:border-t-0">
+      <span className="text-[13px] text-wd-fg-tertiary">{label}</span>
+      <span className="text-right text-[14px] font-bold text-wd-fg-primary">
+        {children}
+      </span>
     </div>
   );
 }

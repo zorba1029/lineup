@@ -1,10 +1,9 @@
 /**
- * 메인 리스트 필터 — 3-tab segmented control.
- * - all  : 같은 라인의 전체 게시글
- * - mine : 내가 작성한 요청 ("나의 요청")
- * - lent : 내가 빌려주겠다고 응답한 글 ("나의 수락", pending + accepted)
- *
- * 세 모드는 상호 배타적. 이전 두 개의 독립 토글에서 의미 명확성을 위해 탭으로 변경.
+ * 메인 리스트 필터 — 3-tab segmented control. Wanted DS lu-tabs 톤.
+ *  - container: border 1px + rounded-xl + p-1
+ *  - active: bg-wd-fg-primary(흑) + 흰 텍스트
+ *  - 비활성: text-wd-fg-tertiary
+ *  - count: 활성 탭만 표시, 흰 배경 + 흑 텍스트 작은 pill
  */
 
 export type FilterMode = 'all' | 'mine' | 'lent';
@@ -27,7 +26,7 @@ export function FilterTabs({ mode, onChange, count }: Props) {
     <div
       role="tablist"
       aria-label="게시글 필터"
-      className="flex gap-1 rounded-lnb bg-card p-1 shadow-lnb-sm"
+      className="flex items-center gap-1 rounded-xl border border-wd-border-default bg-wd-bg-primary p-1"
     >
       {TABS.map((t) => {
         const active = mode === t.value;
@@ -39,20 +38,20 @@ export function FilterTabs({ mode, onChange, count }: Props) {
             aria-selected={active}
             onClick={() => onChange(t.value)}
             className={
-              'flex flex-1 items-center justify-center gap-1.5 rounded-lnb-sm px-2 py-2 text-sm font-bold transition-colors ' +
+              'inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg text-[13px] font-bold transition-colors ' +
               (active
-                ? 'bg-primary text-white shadow-lnb-sm'
-                : 'text-sub hover:text-text')
+                ? 'bg-wd-fg-primary text-wd-fg-on-primary'
+                : 'text-wd-fg-tertiary hover:text-wd-fg-primary')
             }
           >
             <span>{t.label}</span>
-            {/* 모든 탭에 동일 폭 placeholder. 비활성에선 invisible로 텍스트 위치 고정. */}
+            {/* count: 모든 탭에 동일 폭 placeholder. 비활성에선 invisible로 텍스트 위치 고정. */}
             <span
               aria-hidden={!active}
               className={
-                'min-w-[22px] rounded-full px-1.5 text-xs font-extrabold leading-5 ' +
+                'inline-flex h-[18px] min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-extrabold ' +
                 (active && count !== undefined
-                  ? 'bg-white text-primary shadow-lnb-sm'
+                  ? 'bg-wd-bg-primary text-wd-fg-primary'
                   : 'invisible')
               }
             >

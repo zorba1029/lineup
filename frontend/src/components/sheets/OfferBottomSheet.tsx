@@ -9,33 +9,18 @@ import { useUpdateOffer } from '@/features/offers/useUpdateOffer';
 import type { OfferPublic } from '@/lib/types';
 
 /**
- * 화면 07-08 (빌려주기 2-step bottom sheet). PLAN.md §1.D.
- * 신규/수정 동일 UI — `editingOffer` prop이 있으면 수정 모드.
+ * 빌려주기 2-step bottom sheet. Wanted DS lu-sheet 톤.
+ * Step 1: 대여/반납 시간 (preset chip rows + 직접 입력)
+ * Step 2: 대여/반납 장소
  */
 const RENTAL_TIME_PRESETS = ['5분 후', '10분 후', '20분 후', '30분 후'] as const;
 const RETURN_TIME_PRESETS = ['1시간 내', '2시간 내', '3시간 내', '만나서 협의'] as const;
 
 const schema = z.object({
-  rental_time: z
-    .string()
-    .trim()
-    .min(1, '대여 시간을 입력해주세요')
-    .max(20, '20자 이하로 입력해주세요'),
-  return_time: z
-    .string()
-    .trim()
-    .min(1, '반납 시간을 입력해주세요')
-    .max(20, '20자 이하로 입력해주세요'),
-  rental_place: z
-    .string()
-    .trim()
-    .min(1, '대여 장소를 입력해주세요')
-    .max(60, '60자 이하로 입력해주세요'),
-  return_place: z
-    .string()
-    .trim()
-    .min(1, '반납 장소를 입력해주세요')
-    .max(60, '60자 이하로 입력해주세요'),
+  rental_time: z.string().trim().min(1, '대여 시간을 입력해주세요').max(20, '20자 이하로 입력해주세요'),
+  return_time: z.string().trim().min(1, '반납 시간을 입력해주세요').max(20, '20자 이하로 입력해주세요'),
+  rental_place: z.string().trim().min(1, '대여 장소를 입력해주세요').max(60, '60자 이하로 입력해주세요'),
+  return_place: z.string().trim().min(1, '반납 장소를 입력해주세요').max(60, '60자 이하로 입력해주세요'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -47,6 +32,12 @@ interface Props {
   requestName?: string;
   editingOffer?: OfferPublic;
 }
+
+const INPUT_CLS =
+  'h-12 w-full rounded-[10px] border border-wd-border-default bg-wd-bg-primary px-3.5 text-[15px] text-wd-fg-primary outline-none transition-colors placeholder:text-wd-fg-quaternary focus:border-wd-primary';
+
+const PRESET_CHIP =
+  'inline-flex h-8 items-center rounded-full border px-3 text-[12px] font-semibold transition-colors';
 
 export function OfferBottomSheet({
   open,
@@ -81,7 +72,6 @@ export function OfferBottomSheet({
     },
   });
 
-  // open / editingOffer 변경 시 폼/스텝 reset
   useEffect(() => {
     if (open) {
       reset({
@@ -95,7 +85,6 @@ export function OfferBottomSheet({
     }
   }, [open, editingOffer, reset]);
 
-  // ESC로 닫기
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -164,191 +153,193 @@ export function OfferBottomSheet({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-mobile rounded-t-lnb bg-card p-5 pb-[max(env(safe-area-inset-bottom),20px)] shadow-lnb">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+      <div className="w-full max-w-mobile animate-wd-slide-up rounded-t-3xl bg-wd-bg-primary px-5 pb-[max(env(safe-area-inset-bottom),24px)] pt-4 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]">
+        <div className="mx-auto mb-3 h-1 w-[42px] rounded-full bg-wd-border-strong" />
 
-        {/* Step indicator */}
-        <div className="mb-3 flex items-center justify-center gap-2">
+        {/* Step indicator: 2 dots */}
+        <div className="mb-3 flex items-center justify-center gap-1.5">
           <span
-            className={
-              'h-2 w-2 rounded-full transition-colors ' +
-              (step === 1 ? 'bg-primary' : 'bg-border')
-            }
+            className={`h-[7px] w-[7px] rounded-full ${step === 1 ? 'bg-wd-primary' : 'bg-wd-border-default'}`}
           />
           <span
-            className={
-              'h-2 w-2 rounded-full transition-colors ' +
-              (step === 2 ? 'bg-primary' : 'bg-border')
-            }
+            className={`h-[7px] w-[7px] rounded-full ${step === 2 ? 'bg-wd-primary' : 'bg-wd-border-default'}`}
           />
         </div>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        <form onSubmit={onSubmit} className="flex flex-col gap-3.5" noValidate>
           {submitError ? (
-            <div className="rounded-lnb-sm border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+            <div className="rounded-lg border border-wd-negative/30 bg-wd-negative-soft px-3 py-2 text-[13px] text-wd-negative">
               {submitError}
             </div>
           ) : null}
 
           {step === 1 ? (
             <>
-              <h2 className="text-lg font-bold text-text">언제 주고 받을까요?</h2>
+              <h2 className="text-[19px] font-extrabold tracking-tight text-wd-fg-primary">
+                언제 주고 받을까요?
+              </h2>
+              {requestName ? (
+                <p className="-mt-3 text-[12px] text-wd-fg-tertiary">
+                  <strong className="text-wd-fg-secondary">{requestName}</strong>
+                  을(를) 빌려드릴 시간 선택
+                </p>
+              ) : null}
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-text" htmlFor="rental_time">
-                  대여 시간
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {RENTAL_TIME_PRESETS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      aria-pressed={rentalTime === p}
-                      onClick={() =>
-                        setValue('rental_time', p, { shouldValidate: true })
-                      }
-                      className={
-                        'rounded-lnb-sm border px-3 py-1.5 text-xs font-bold transition-colors ' +
-                        (rentalTime === p
-                          ? 'border-primary bg-primary-light text-primary'
-                          : 'border-border bg-card text-sub')
-                      }
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  id="rental_time"
-                  maxLength={20}
-                  placeholder="직접 입력 (예: 오후 3시)"
-                  className="h-11 rounded-lnb-sm border border-border bg-card px-3 text-text outline-none focus:border-primary"
-                  {...register('rental_time')}
-                />
-                {errors.rental_time ? (
-                  <span className="text-xs text-accent">
-                    {errors.rental_time.message}
-                  </span>
-                ) : null}
-              </div>
+              <PresetField
+                label="대여 시간"
+                presets={RENTAL_TIME_PRESETS}
+                current={rentalTime}
+                onPick={(p) => setValue('rental_time', p, { shouldValidate: true })}
+                inputId="rental_time"
+                inputProps={register('rental_time')}
+                inputPlaceholder="직접 입력 (예: 오후 3시)"
+                error={errors.rental_time?.message}
+              />
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-text" htmlFor="return_time">
-                  반납 시간
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {RETURN_TIME_PRESETS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      aria-pressed={returnTime === p}
-                      onClick={() =>
-                        setValue('return_time', p, { shouldValidate: true })
-                      }
-                      className={
-                        'rounded-lnb-sm border px-3 py-1.5 text-xs font-bold transition-colors ' +
-                        (returnTime === p
-                          ? 'border-primary bg-primary-light text-primary'
-                          : 'border-border bg-card text-sub')
-                      }
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  id="return_time"
-                  maxLength={20}
-                  placeholder="직접 입력 (예: 내일 오전)"
-                  className="h-11 rounded-lnb-sm border border-border bg-card px-3 text-text outline-none focus:border-primary"
-                  {...register('return_time')}
-                />
-                {errors.return_time ? (
-                  <span className="text-xs text-accent">
-                    {errors.return_time.message}
-                  </span>
-                ) : null}
-              </div>
+              <PresetField
+                label="반납 시간"
+                presets={RETURN_TIME_PRESETS}
+                current={returnTime}
+                onPick={(p) => setValue('return_time', p, { shouldValidate: true })}
+                inputId="return_time"
+                inputProps={register('return_time')}
+                inputPlaceholder="직접 입력 (예: 내일 오전)"
+                error={errors.return_time?.message}
+              />
 
               <button
                 type="button"
                 onClick={handleNext}
-                className="mt-2 h-12 rounded-lnb bg-primary font-bold text-white shadow-lnb-sm transition-colors hover:bg-primary-dark"
+                className="mt-1 inline-flex h-12 items-center justify-center rounded-xl bg-wd-primary text-[15px] font-bold text-white transition-colors hover:bg-wd-primary-hover active:scale-[0.98]"
               >
                 다음
               </button>
             </>
           ) : (
             <>
-              <h2 className="text-lg font-bold text-text">어디서 주고 받을까요?</h2>
+              <h2 className="text-[19px] font-extrabold tracking-tight text-wd-fg-primary">
+                어디서 주고 받을까요?
+              </h2>
 
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="rental_place"
-                  className="text-sm font-bold text-text"
-                >
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="rental_place" className="text-[13px] font-bold text-wd-fg-primary">
                   대여 장소
                 </label>
                 <input
                   id="rental_place"
                   maxLength={60}
                   placeholder="예: 현관 앞, 엘리베이터 앞"
-                  className="h-11 rounded-lnb-sm border border-border bg-card px-3 text-text outline-none focus:border-primary"
+                  className={INPUT_CLS}
                   {...register('rental_place')}
                 />
                 {errors.rental_place ? (
-                  <span className="text-xs text-accent">
-                    {errors.rental_place.message}
-                  </span>
+                  <span className="text-[12px] text-wd-negative">{errors.rental_place.message}</span>
                 ) : null}
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="return_place"
-                  className="text-sm font-bold text-text"
-                >
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="return_place" className="text-[13px] font-bold text-wd-fg-primary">
                   반납 장소
                 </label>
                 <input
                   id="return_place"
                   maxLength={60}
                   placeholder="예: 현관 앞, 엘리베이터 앞"
-                  className="h-11 rounded-lnb-sm border border-border bg-card px-3 text-text outline-none focus:border-primary"
+                  className={INPUT_CLS}
                   {...register('return_place')}
                 />
                 {errors.return_place ? (
-                  <span className="text-xs text-accent">
-                    {errors.return_place.message}
-                  </span>
+                  <span className="text-[12px] text-wd-negative">{errors.return_place.message}</span>
                 ) : null}
               </div>
 
-              <div className="mt-2 flex gap-2">
+              <div className="mt-1 flex gap-2">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
                   disabled={isPending}
-                  className="h-12 w-24 rounded-lnb border border-border bg-card font-bold text-sub disabled:opacity-50"
+                  className="inline-flex h-12 w-24 items-center justify-center gap-1 rounded-xl border border-wd-border-default bg-wd-bg-primary text-[14px] font-bold text-wd-fg-primary transition-colors hover:bg-wd-bg-tertiary disabled:opacity-50"
                 >
-                  ← 이전
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                    <path
+                      d="M15 6l-6 6 6 6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  이전
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="h-12 flex-1 rounded-lnb bg-primary font-bold text-white shadow-lnb-sm transition-colors hover:bg-primary-dark disabled:opacity-60"
+                  className="inline-flex h-12 flex-1 items-center justify-center rounded-xl bg-wd-primary text-[15px] font-bold text-white transition-colors hover:bg-wd-primary-hover active:scale-[0.98] disabled:opacity-50"
                 >
-                  {isPending
-                    ? '저장 중…'
-                    : isEditing
-                      ? '수정하기'
-                      : '등록하기'}
+                  {isPending ? '저장 중…' : isEditing ? '수정하기' : '등록하기'}
                 </button>
               </div>
             </>
           )}
         </form>
       </div>
+    </div>
+  );
+}
+
+function PresetField({
+  label,
+  presets,
+  current,
+  onPick,
+  inputId,
+  inputProps,
+  inputPlaceholder,
+  error,
+}: {
+  label: string;
+  presets: readonly string[];
+  current: string;
+  onPick: (p: string) => void;
+  inputId: string;
+  inputProps: ReturnType<ReturnType<typeof useForm<FormValues>>['register']>;
+  inputPlaceholder: string;
+  error?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={inputId} className="text-[13px] font-bold text-wd-fg-primary">
+        {label}
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        {presets.map((p) => {
+          const active = current === p;
+          return (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onPick(p)}
+              className={
+                PRESET_CHIP +
+                ' ' +
+                (active
+                  ? 'border-wd-primary bg-wd-primary-soft text-wd-primary'
+                  : 'border-wd-border-default bg-wd-bg-primary text-wd-fg-tertiary')
+              }
+            >
+              {p}
+            </button>
+          );
+        })}
+      </div>
+      <input
+        id={inputId}
+        maxLength={20}
+        placeholder={inputPlaceholder}
+        className={INPUT_CLS}
+        {...inputProps}
+      />
+      {error ? <span className="text-[12px] text-wd-negative">{error}</span> : null}
     </div>
   );
 }

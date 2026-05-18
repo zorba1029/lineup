@@ -1,13 +1,72 @@
+/* Pretendard Variable — KR/Latin. dynamic subset은 본 글자만 가져오는 가벼운 버전. */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   Wanted Design System — semantic 디자인 토큰
+   원본은 ~/Downloads/lineup-mobile.html (Wanted DS 기반).
+   atomic palette는 컴포넌트 단계 교체 시 추가 도입.
+   ============================================================ */
+:root {
+  /* Foreground */
+  --wd-fg-primary:     #171719;
+  --wd-fg-secondary:   rgba(46, 47, 51, 0.88);
+  --wd-fg-tertiary:    rgba(55, 56, 60, 0.61);
+  --wd-fg-quaternary:  rgba(112, 115, 124, 0.61);
+  --wd-fg-disabled:    rgba(112, 115, 124, 0.43);
+  --wd-fg-inverse:     #FFFFFF;
+  --wd-fg-on-primary:  #FFFFFF;
+
+  /* Background */
+  --wd-bg-primary:        #FFFFFF;
+  --wd-bg-secondary:      #F7F7F8;
+  --wd-bg-tertiary:       rgba(112, 115, 124, 0.05);
+  --wd-bg-quaternary:     rgba(112, 115, 124, 0.08);
+  --wd-bg-inverse:        #171719;
+  --wd-bg-surface:        #FFFFFF;
+  --wd-bg-surface-tinted: #F1F5F8;
+
+  /* Semantic colors */
+  --wd-color-primary:         #0066FF;
+  --wd-color-primary-hover:   #005EEB;
+  --wd-color-primary-press:   #0054D1;
+  --wd-color-primary-soft:    #EAF2FE;
+  --wd-color-primary-faint:   #F7FBFF;
+
+  --wd-color-positive:        #00BF40;
+  --wd-color-positive-soft:   #E5F8EB;
+  --wd-color-negative:        #FF4242;
+  --wd-color-negative-soft:   #FFEDED;
+  --wd-color-cautionary:      #FF9200;
+  --wd-color-cautionary-soft: #FFF1E0;
+  --wd-color-informative:     #0098B2;
+  --wd-color-informative-soft:#E5F7FA;
+  --wd-color-accent:          #6541F2;
+  --wd-color-accent-soft:     #EDE7FE;
+
+  /* Borders */
+  --wd-border-subtle:   rgba(112, 115, 124, 0.16);
+  --wd-border-default:  rgba(112, 115, 124, 0.22);
+  --wd-border-strong:   rgba(112, 115, 124, 0.35);
+}
 
 @layer base {
   html, body, #root {
     @apply h-full;
   }
   body {
-    @apply bg-[#ECEEF6] text-text font-sans antialiased;
+    background: var(--wd-bg-secondary);
+    color: var(--wd-fg-primary);
+    font-family:
+      'Pretendard Variable', Pretendard,
+      -apple-system, BlinkMacSystemFont,
+      'Apple SD Gothic Neo', 'Noto Sans KR',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
   }
   /* iOS safe area */
