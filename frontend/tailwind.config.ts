@@ -9,6 +9,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        /* 기존 단일 톤(legacy) — 점진 마이그레이션 동안 유지. 새 컴포넌트는 wd-* 사용 권장. */
         primary: {
           DEFAULT: '#5B6EF7',
           light: '#EEF0FF',
@@ -25,13 +26,67 @@ export default {
         text: '#1E2340',
         sub: '#7B849C',
         border: '#E6E9F4',
+
+        /* Wanted Design System — semantic 토큰 (index.css의 :root에서 정의) */
+        wd: {
+          /* Foreground */
+          'fg-primary':    'var(--wd-fg-primary)',
+          'fg-secondary':  'var(--wd-fg-secondary)',
+          'fg-tertiary':   'var(--wd-fg-tertiary)',
+          'fg-quaternary': 'var(--wd-fg-quaternary)',
+          'fg-disabled':   'var(--wd-fg-disabled)',
+          'fg-inverse':    'var(--wd-fg-inverse)',
+          'fg-on-primary': 'var(--wd-fg-on-primary)',
+
+          /* Background */
+          'bg-primary':        'var(--wd-bg-primary)',
+          'bg-secondary':      'var(--wd-bg-secondary)',
+          'bg-tertiary':       'var(--wd-bg-tertiary)',
+          'bg-quaternary':     'var(--wd-bg-quaternary)',
+          'bg-inverse':        'var(--wd-bg-inverse)',
+          'bg-surface':        'var(--wd-bg-surface)',
+          'bg-surface-tinted': 'var(--wd-bg-surface-tinted)',
+
+          /* Semantic */
+          'primary':         'var(--wd-color-primary)',
+          'primary-hover':   'var(--wd-color-primary-hover)',
+          'primary-press':   'var(--wd-color-primary-press)',
+          'primary-soft':    'var(--wd-color-primary-soft)',
+          'primary-faint':   'var(--wd-color-primary-faint)',
+          'positive':        'var(--wd-color-positive)',
+          'positive-soft':   'var(--wd-color-positive-soft)',
+          'negative':        'var(--wd-color-negative)',
+          'negative-soft':   'var(--wd-color-negative-soft)',
+          'cautionary':      'var(--wd-color-cautionary)',
+          'cautionary-soft': 'var(--wd-color-cautionary-soft)',
+          'informative':     'var(--wd-color-informative)',
+          'informative-soft':'var(--wd-color-informative-soft)',
+          'accent':          'var(--wd-color-accent)',
+          'accent-soft':     'var(--wd-color-accent-soft)',
+
+          /* Border */
+          'border-subtle':  'var(--wd-border-subtle)',
+          'border-default': 'var(--wd-border-default)',
+          'border-strong':  'var(--wd-border-strong)',
+        },
       },
       fontFamily: {
         sans: [
+          'Pretendard Variable',
+          'Pretendard',
           '-apple-system',
           'BlinkMacSystemFont',
           'Apple SD Gothic Neo',
           'Noto Sans KR',
+          'sans-serif',
+        ],
+        display: [
+          'Wanted Sans Variable',
+          'Wanted Sans',
+          'Pretendard Variable',
+          'Pretendard',
+          '-apple-system',
+          'BlinkMacSystemFont',
           'sans-serif',
         ],
       },
