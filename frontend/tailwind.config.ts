@@ -123,12 +123,18 @@ export default {
           '0%':   { boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.50)' },
           '100%': { boxShadow: '0 0 0 8px rgba(255, 255, 255, 0)' },
         },
+        // Wanted DS — bottom sheet slide-up entry
+        'wd-slide-up': {
+          from: { transform: 'translateY(40px)', opacity: '0' },
+          to:   { transform: 'translateY(0)',    opacity: '1' },
+        },
       },
       animation: {
         'blink-soft':       'blink-soft 1.4s steps(1, end) infinite',
         'wd-pulse':         'wd-pulse 1.8s ease-out infinite',
         'wd-blink':         'wd-blink 1.4s ease-in-out infinite',
         'wd-newpost-pulse': 'wd-newpost-pulse 1.6s ease-out infinite',
+        'wd-slide-up':      'wd-slide-up 280ms cubic-bezier(0.4, 0, 0.2, 1)',
       },
     },
   },

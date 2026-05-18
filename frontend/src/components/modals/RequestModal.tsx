@@ -33,13 +33,14 @@ export interface RequestPrefill {
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** NudgeBanner에서 추천 항목으로 모달을 열 때 사용. */
   prefill?: RequestPrefill | null;
 }
 
+const INPUT_CLS =
+  'h-12 w-full rounded-[10px] border border-wd-border-default bg-wd-bg-primary px-3.5 text-[15px] text-wd-fg-primary outline-none transition-colors placeholder:text-wd-fg-quaternary focus:border-wd-primary';
+
 /**
- * "도움이 필요해요" 등록 시트.
- * 모바일 bottom sheet 스타일 — backdrop + 아래에서 슬라이드 업.
+ * "도움이 필요해요" 등록 sheet. Wanted DS lu-sheet 톤.
  */
 export function RequestModal({ open, onClose, prefill }: Props) {
   const create = useCreateRequest();
@@ -66,7 +67,6 @@ export function RequestModal({ open, onClose, prefill }: Props) {
   const category = watch('category');
   const urgent = watch('urgent');
 
-  // 열릴 때 prefill 적용 / 닫힐 때 폼 리셋
   useEffect(() => {
     if (open) {
       reset({
@@ -82,7 +82,6 @@ export function RequestModal({ open, onClose, prefill }: Props) {
     }
   }, [open, prefill, reset]);
 
-  // ESC로 닫기
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -101,11 +100,11 @@ export function RequestModal({ open, onClose, prefill }: Props) {
       onClose();
       navigate(`/requests/${created.id}`);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setSubmitError(err.message || '등록에 실패했습니다.');
-      } else {
-        setSubmitError('네트워크 오류가 발생했습니다.');
-      }
+      setSubmitError(
+        err instanceof ApiError
+          ? err.message || '등록에 실패했습니다.'
+          : '네트워크 오류가 발생했습니다.',
+      );
     }
   });
 
@@ -118,29 +117,39 @@ export function RequestModal({ open, onClose, prefill }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-mobile rounded-t-lnb bg-card p-5 pb-[max(env(safe-area-inset-bottom),20px)] shadow-lnb">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-text">도움이 필요해요</h2>
+      <div className="w-full max-w-mobile animate-wd-slide-up rounded-t-3xl bg-wd-bg-primary px-5 pb-[max(env(safe-area-inset-bottom),24px)] pt-4 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]">
+        <div className="mx-auto mb-3.5 h-1 w-[42px] rounded-full bg-wd-border-strong" />
+
+        <div className="mb-3.5 flex items-center justify-between">
+          <h2 className="text-[19px] font-extrabold tracking-tight text-wd-fg-primary">
+            도움이 필요해요
+          </h2>
           <button
             type="button"
             aria-label="닫기"
             onClick={onClose}
-            className="text-2xl leading-none text-sub"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-wd-bg-tertiary text-wd-fg-tertiary"
           >
-            ×
+            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        <form onSubmit={onSubmit} className="flex flex-col gap-3.5" noValidate>
           {submitError ? (
-            <div className="rounded-lnb-sm border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+            <div className="rounded-lg border border-wd-negative/30 bg-wd-negative-soft px-3 py-2 text-[13px] text-wd-negative">
               {submitError}
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="name" className="text-sm font-bold text-text">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="name" className="text-[13px] font-bold text-wd-fg-primary">
               물건 이름
             </label>
             <input
@@ -148,45 +157,46 @@ export function RequestModal({ open, onClose, prefill }: Props) {
               autoFocus
               maxLength={80}
               placeholder="예: 전동 드릴, 케이크 틀"
-              className="h-11 rounded-lnb-sm border border-border bg-card px-3 text-text outline-none focus:border-primary"
+              className={INPUT_CLS}
               {...register('name')}
             />
             {errors.name ? (
-              <span className="text-xs text-accent">{errors.name.message}</span>
+              <span className="text-[12px] text-wd-negative">{errors.name.message}</span>
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-bold text-text">카테고리</span>
-            <div className="flex flex-wrap gap-1.5">
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() =>
-                    setValue('category', c as Category, { shouldValidate: true })
-                  }
-                  aria-pressed={category === c}
-                  className={
-                    'rounded-lnb-sm border px-3 py-1.5 text-xs font-bold transition-colors ' +
-                    (category === c
-                      ? 'border-primary bg-primary-light text-primary'
-                      : 'border-border bg-card text-sub')
-                  }
-                >
-                  {c}
-                </button>
-              ))}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-bold text-wd-fg-primary">카테고리</span>
+            <div className="grid grid-cols-3 gap-1.5">
+              {CATEGORIES.map((c) => {
+                const active = category === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() =>
+                      setValue('category', c as Category, { shouldValidate: true })
+                    }
+                    aria-pressed={active}
+                    className={
+                      'inline-flex h-10 items-center justify-center rounded-lg border text-[13px] font-semibold transition-colors ' +
+                      (active
+                        ? 'border-wd-primary bg-wd-primary-soft text-wd-primary'
+                        : 'border-wd-border-default bg-wd-bg-primary text-wd-fg-tertiary')
+                    }
+                  >
+                    {c}
+                  </button>
+                );
+              })}
             </div>
             {errors.category ? (
-              <span className="text-xs text-accent">
-                {errors.category.message}
-              </span>
+              <span className="text-[12px] text-wd-negative">{errors.category.message}</span>
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="description" className="text-sm font-bold text-text">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="description" className="text-[13px] font-bold text-wd-fg-primary">
               설명
             </label>
             <textarea
@@ -194,33 +204,48 @@ export function RequestModal({ open, onClose, prefill }: Props) {
               rows={3}
               maxLength={200}
               placeholder="언제, 얼마나 필요한지 한 줄로 알려주세요"
-              className="rounded-lnb-sm border border-border bg-card px-3 py-2 text-text outline-none focus:border-primary"
+              className="w-full resize-none rounded-[10px] border border-wd-border-default bg-wd-bg-primary px-3.5 py-3 text-[15px] text-wd-fg-primary outline-none transition-colors placeholder:text-wd-fg-quaternary focus:border-wd-primary"
               {...register('description')}
             />
             {errors.description ? (
-              <span className="text-xs text-accent">
-                {errors.description.message}
-              </span>
+              <span className="text-[12px] text-wd-negative">{errors.description.message}</span>
             ) : null}
           </div>
 
-          <label className="flex items-center justify-between rounded-lnb-sm border border-border bg-card px-3 py-2.5">
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-text">급해요</span>
-              <span className="text-xs text-sub">목록에서 강조 표시돼요</span>
+          <label
+            className={
+              'flex items-center justify-between rounded-[10px] border px-3.5 py-3 transition-colors ' +
+              (urgent
+                ? 'border-wd-accent bg-wd-accent-soft'
+                : 'border-wd-border-default bg-wd-bg-primary')
+            }
+          >
+            <div className="flex flex-col gap-0.5">
+              <span
+                className={
+                  'text-[14px] font-bold ' +
+                  (urgent ? 'text-wd-accent' : 'text-wd-fg-primary')
+                }
+              >
+                급해요
+              </span>
+              <span className="text-[11px] text-wd-fg-tertiary">
+                목록에서 보라색으로 강조 표시돼요
+              </span>
             </div>
             <input
               type="checkbox"
               checked={urgent}
               onChange={(e) => setValue('urgent', e.target.checked)}
-              className="h-5 w-5 accent-primary"
+              className="h-5 w-5"
+              style={{ accentColor: 'var(--wd-color-accent)' }}
             />
           </label>
 
           <button
             type="submit"
             disabled={create.isPending}
-            className="mt-2 h-12 rounded-lnb bg-primary font-bold text-white shadow-lnb-sm transition-colors hover:bg-primary-dark disabled:opacity-60"
+            className="mt-1 inline-flex h-12 items-center justify-center rounded-xl bg-wd-primary text-[15px] font-bold text-white transition-colors hover:bg-wd-primary-hover active:scale-[0.98] disabled:opacity-50"
           >
             {create.isPending ? '등록 중…' : '같은 라인 이웃에게 알림 보내기'}
           </button>
