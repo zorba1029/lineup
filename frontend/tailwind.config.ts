@@ -102,15 +102,27 @@ export default {
         'lnb-sm': '0 2px 8px rgba(0,0,0,0.07)',
       },
       keyframes: {
-        // urgent-dot blink. 50/50 cadence ─ 꺼진 구간에도 어둡게 빨강이 남아
-        // "켜짐 ↔ 어두운 켜짐"으로 자연스러운 깜빡임.
+        // legacy — 다른 곳에서 안 쓰면 추후 제거.
         'blink-soft': {
           '0%, 49%': { opacity: '1' },
           '50%, 100%': { opacity: '0.3' },
         },
+        // Wanted DS — open status pulse (ring expansion via box-shadow)
+        'wd-pulse': {
+          '0%':   { boxShadow: '0 0 0 0 rgba(0, 102, 255, 0.45)' },
+          '70%':  { boxShadow: '0 0 0 8px rgba(0, 102, 255, 0)' },
+          '100%': { boxShadow: '0 0 0 0 rgba(0, 102, 255, 0)' },
+        },
+        // Wanted DS — urgent dot fade blink
+        'wd-blink': {
+          '0%, 100%': { opacity: '1' },
+          '50%':      { opacity: '0.35' },
+        },
       },
       animation: {
         'blink-soft': 'blink-soft 1.4s steps(1, end) infinite',
+        'wd-pulse':   'wd-pulse 1.8s ease-out infinite',
+        'wd-blink':   'wd-blink 1.4s ease-in-out infinite',
       },
     },
   },

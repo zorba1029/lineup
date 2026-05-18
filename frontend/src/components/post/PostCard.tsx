@@ -1,123 +1,126 @@
 import { useNavigate } from 'react-router-dom';
 import type { RequestPublic, RequestStatus } from '@/lib/types';
-import { CATEGORY_CHIP_CLASS, type Category } from '@/lib/categories';
 import { formatRelative } from '@/lib/time';
+import { CountdownTimer } from '../timer/CountdownTimer';
 
 interface Props {
   post: RequestPublic;
   isMine: boolean;
 }
 
-/** 좌측 세로 bar 색 — 카드 상태를 멀리서도 한눈에. */
-function statusBarColor(status: RequestStatus): string {
-  switch (status) {
-    case 'matched':
-      return 'bg-green';
-    case 'expired':
-    case 'cancelled':
-      return 'bg-sub';
-    case 'open':
-    default:
-      return 'bg-primary';
-  }
-}
+/** 좌측 4px status bar 색. */
+const STATUS_BAR: Record<RequestStatus, string> = {
+  open: 'bg-wd-primary',
+  matched: 'bg-wd-positive',
+  expired: 'bg-wd-fg-quaternary',
+  cancelled: 'bg-wd-fg-quaternary',
+};
 
-/** 카드 첫 줄 라벨 — 상태에 따라 즉각 인지 가능한 텍스트·색으로 분기.
- *  종료 상태(matched/expired/cancelled)는 진한 배경 pill로 강조해서 멀리서도 보임. */
-function topLabel(status: RequestStatus): { text: string; cls: string } {
-  switch (status) {
-    case 'matched':
-      return {
-        text: '거래 완료',
-        cls: 'rounded-lnb-sm bg-green px-2 py-0.5 text-white shadow-lnb-sm',
-      };
-    case 'expired':
-      return {
-        text: '거래 종료',
-        cls: 'rounded-lnb-sm bg-sub px-2 py-0.5 text-white',
-      };
-    case 'cancelled':
-      return {
-        text: '취소됨',
-        cls: 'rounded-lnb-sm bg-sub px-2 py-0.5 text-white',
-      };
-    case 'open':
-    default:
-      return { text: '이웃이 찾고 있어요', cls: 'text-primary' };
-  }
-}
+/** top row의 status-line: 점(pulse|dot) + 라벨 텍스트 색. */
+const STATUS_LINE: Record<RequestStatus, { text: string; cls: string }> = {
+  open: { text: '이웃이 찾고 있어요', cls: 'text-wd-primary' },
+  matched: { text: '거래 완료', cls: 'text-wd-positive' },
+  expired: { text: '거래 종료', cls: 'text-wd-fg-tertiary' },
+  cancelled: { text: '취소됨', cls: 'text-wd-fg-tertiary' },
+};
+
+/** 메타 chip 공통 — 22px height, 8px padding, 11px semibold. */
+const CHIP =
+  'inline-flex items-center gap-1 h-[22px] px-2 rounded-lg text-[11px] font-semibold tracking-wide';
 
 /**
- * 메인 리스트의 게시글 카드. 클릭 시 /requests/:id로 이동.
- * 상단 라벨은 status에 따라 교체 — open이면 모집 중 안내, matched/expired/cancelled는
- * 종료 상태를 첫 줄에서 즉시 노출 (하단 작은 배지보다 인지 빠름).
+ * 메인 리스트 카드. Wanted DS lu-card 기반.
+ *  - 좌측 4px status bar (open: blue / matched: green / expired·cancelled: gray)
+ *  - top row: status-line + (open & pending offer count > 0 시) 응답 pill
+ *  - title (17px bold) + 내 글 작은 pill
+ *  - description (13px tertiary, 2줄 clamp)
+ *  - meta chip row: 카테고리 / 급해요(blink) / 시간 / 남은 시간(open만) / 작성자 위치
  */
 export function PostCard({ post, isMine }: Props) {
   const navigate = useNavigate();
-  const categoryClass =
-    CATEGORY_CHIP_CLASS[post.category as Category] ?? 'bg-bg text-sub';
-  const label = topLabel(post.status);
+  const isDim = post.status === 'expired' || post.status === 'cancelled';
+  const status = STATUS_LINE[post.status];
 
   return (
     <button
       type="button"
       onClick={() => navigate(`/requests/${post.id}`)}
-      className="relative flex flex-col rounded-lnb bg-card p-3.5 pl-4 text-left shadow-lnb-sm transition-transform active:scale-[0.99]"
+      className={
+        'relative flex w-full flex-col rounded-2xl border border-wd-border-default bg-wd-bg-primary py-3.5 pl-[18px] pr-3.5 text-left transition-transform active:scale-[0.99]' +
+        (isDim ? ' opacity-[0.68]' : '')
+      }
     >
-      {/* 좌측 세로 status bar */}
+      {/* 좌측 4px status bar */}
       <span
         aria-hidden
-        className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-lnb ${statusBarColor(post.status)}`}
+        className={`absolute inset-y-0 left-0 w-1 rounded-l-2xl ${STATUS_BAR[post.status]}`}
       />
 
-      {/* 줄 간격은 프로토타입과 동일하게 mb-1(4px) / mb-1(3-4px) / mb-2(7-8px) */}
-      <div className="mb-1 flex items-center gap-1.5">
-        <span className={`text-sm font-bold ${label.cls}`}>{label.text}</span>
+      {/* top row: status-line + 응답 pill */}
+      <div className="mb-1.5 flex min-h-[22px] items-center gap-1.5">
+        <span
+          className={`inline-flex items-center gap-1.5 text-xs font-bold tracking-wide ${status.cls}`}
+        >
+          {post.status === 'open' ? (
+            <span className="h-1.5 w-1.5 rounded-full bg-wd-primary animate-wd-pulse" />
+          ) : (
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          )}
+          <span>{status.text}</span>
+        </span>
         {post.status === 'open' && post.pending_offer_count > 0 ? (
-          <span className="rounded-lnb-sm bg-primary px-2 py-0.5 text-sm font-bold text-white shadow-lnb-sm">
-            {post.pending_offer_count}명 응답
+          <span className="inline-flex h-[22px] items-center gap-1 rounded-lg bg-wd-primary px-2 text-[11px] font-bold tracking-wide text-white">
+            <span className="font-extrabold">{post.pending_offer_count}</span>
+            <span>명 응답</span>
           </span>
         ) : null}
       </div>
 
-      <div className="mb-1 flex items-center gap-2">
-        <span className="truncate text-lg font-bold text-text">{post.name}</span>
+      {/* title */}
+      <h3 className="mb-1 flex items-center gap-1.5">
+        <span className="flex-1 truncate text-[17px] font-bold tracking-tight text-wd-fg-primary">
+          {post.name}
+        </span>
         {isMine ? (
-          <span className="rounded-lnb-sm bg-primary-light px-2 py-0.5 text-xs font-bold text-primary">
+          <span className="inline-flex h-[18px] items-center rounded bg-wd-primary-soft px-1.5 text-[10px] font-bold text-wd-primary">
             내 글
           </span>
         ) : null}
-      </div>
+      </h3>
 
+      {/* description */}
       {post.description ? (
-        <p className="mb-2 line-clamp-2 text-sm text-sub">{post.description}</p>
+        <p className="mb-2.5 line-clamp-2 text-[13px] leading-relaxed text-wd-fg-tertiary">
+          {post.description}
+        </p>
       ) : null}
 
-      {/* 메타: 카테고리 / 급해요(blinking dot) / 시간 / 작성자 위치 — 프로토타입과 동일 순서 */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span
-          className={`rounded-lnb-sm px-2 py-0.5 text-sm font-bold ${categoryClass}`}
-        >
+      {/* meta chip row */}
+      <div className="flex flex-wrap items-center gap-1">
+        <span className={`${CHIP} bg-wd-primary-soft text-wd-primary`}>
           {post.category}
         </span>
         {post.urgent ? (
-          <span className="inline-flex items-center gap-1.5 rounded-lnb-sm bg-accent/10 px-2 py-0.5 text-sm font-bold text-accent">
-            {/* Tailwind JIT가 string concat으로 만든 클래스를 누락하는 경우가 있어
-                완전한 클래스 문자열 ternary로 분기. status='open'일 때만 blink. */}
+          <span className={`${CHIP} bg-wd-accent-soft text-wd-accent`}>
             <span
               className={
                 post.status === 'open'
-                  ? 'h-2 w-2 rounded-full bg-accent animate-blink-soft'
-                  : 'h-2 w-2 rounded-full bg-accent'
+                  ? 'h-1.5 w-1.5 rounded-full bg-wd-accent animate-wd-blink'
+                  : 'h-1.5 w-1.5 rounded-full bg-wd-accent'
               }
             />
             급해요
           </span>
         ) : null}
-        <span className="rounded-lnb-sm bg-bg px-2 py-0.5 text-sm text-sub">
+        <span className={`${CHIP} bg-wd-bg-tertiary text-wd-fg-tertiary`}>
           {formatRelative(post.created_at)}
         </span>
-        <span className="rounded-lnb-sm bg-bg px-2 py-0.5 text-sm text-sub">
+        {post.status === 'open' ? (
+          <span className={`${CHIP} bg-wd-bg-tertiary text-wd-fg-tertiary`}>
+            <CountdownTimer expiresAt={post.expires_at} />
+          </span>
+        ) : null}
+        <span className={`${CHIP} bg-wd-bg-tertiary text-wd-fg-tertiary`}>
           {post.author.dong} {post.author.unit}
         </span>
       </div>

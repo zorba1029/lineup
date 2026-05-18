@@ -35,7 +35,8 @@ export function CountdownTimer({ expiresAt, className }: CountdownTimerProps) {
   const isUrgent = remainingMs > 0 && remainingMs < ONE_HOUR_MS;
   const text = formatRemaining(expiresAt, now);
 
-  const cls = [className, isUrgent ? 'text-accent font-bold' : '']
+  // 1시간 미만 = cautionary(주황) 강조. wd 디자인 토큰.
+  const cls = [className, isUrgent ? 'text-wd-cautionary font-bold' : '']
     .filter(Boolean)
     .join(' ');
 
