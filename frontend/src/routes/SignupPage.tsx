@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAuthStore } from '@/lib/auth';
 import { zodResolver } from '@/lib/validation';
 import { useSignup } from '@/features/auth/useSignup';
 import { ApiError } from '@/lib/api';
+import { DetailHeader } from '@/components/layout/DetailHeader';
 
 const signupSchema = z
   .object({
@@ -41,12 +42,16 @@ const signupSchema = z
 
 type SignupForm = z.infer<typeof signupSchema>;
 
+const INPUT_CLS =
+  'h-12 w-full rounded-[10px] border border-wd-border-default bg-wd-bg-primary px-3.5 text-[15px] text-wd-fg-primary outline-none transition-colors placeholder:text-wd-fg-quaternary focus:border-wd-primary';
+
 /**
- * 화면 02 (회원가입). PLAN.md §1.A.
+ * 화면 02 (회원가입). Wanted DS lu-auth + DetailHeader 패턴.
  */
 export function SignupPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const signup = useSignup();
+  const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -67,7 +72,6 @@ export function SignupPage() {
     },
   });
 
-  // 백엔드 에러 → 폼/필드 매핑
   useEffect(() => {
     if (!signup.error) {
       setFormError(null);
@@ -94,7 +98,6 @@ export function SignupPage() {
 
   const onSubmit = handleSubmit((values) => {
     setFormError(null);
-    // passwordConfirm은 클라이언트 검증용이므로 서버에는 보내지 않는다.
     const payload = {
       username: values.username,
       password: values.password,
@@ -107,118 +110,128 @@ export function SignupPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6 px-6 py-10">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-black text-text">회원가입</h1>
-        <p className="text-sm text-sub">우리 라인 이웃에게만 보여요</p>
-      </header>
+    <div className="flex min-h-full flex-col">
+      <DetailHeader title="회원가입" onBack={() => navigate('/login')} />
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-        {formError ? (
-          <div
-            role="alert"
-            className="rounded-lnb-sm border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent"
-          >
-            {formError}
-          </div>
-        ) : null}
-
-        <Field label="아이디" htmlFor="username" error={errors.username?.message}>
-          <input
-            id="username"
-            type="text"
-            autoComplete="username"
-            className="h-11 rounded-lnb-sm border border-border bg-card px-3 outline-none focus:border-primary"
-            {...register('username')}
-          />
-        </Field>
-
-        <Field label="비밀번호" htmlFor="password" error={errors.password?.message}>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            className="h-11 rounded-lnb-sm border border-border bg-card px-3 outline-none focus:border-primary"
-            {...register('password')}
-          />
-        </Field>
-
-        <Field
-          label="비밀번호 확인"
-          htmlFor="passwordConfirm"
-          error={errors.passwordConfirm?.message}
-        >
-          <input
-            id="passwordConfirm"
-            type="password"
-            autoComplete="new-password"
-            className="h-11 rounded-lnb-sm border border-border bg-card px-3 outline-none focus:border-primary"
-            {...register('passwordConfirm')}
-          />
-        </Field>
-
-        <Field label="이름" htmlFor="name" error={errors.name?.message}>
-          <input
-            id="name"
-            type="text"
-            autoComplete="name"
-            className="h-11 rounded-lnb-sm border border-border bg-card px-3 outline-none focus:border-primary"
-            {...register('name')}
-          />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="동" htmlFor="dong" error={errors.dong?.message}>
-            <input
-              id="dong"
-              type="text"
-              placeholder="예: 101동"
-              className="h-11 rounded-lnb-sm border border-border bg-card px-3 outline-none focus:border-primary"
-              {...register('dong')}
-            />
-          </Field>
-          <Field label="호수" htmlFor="unit" error={errors.unit?.message}>
-            <input
-              id="unit"
-              type="text"
-              placeholder="예: 1101호"
-              className="h-11 rounded-lnb-sm border border-border bg-card px-3 outline-none focus:border-primary"
-              {...register('unit')}
-            />
-          </Field>
+      <div className="flex flex-col gap-4 px-6 pb-6 pt-5">
+        <div>
+          <h2 className="font-display text-[22px] font-extrabold tracking-tight text-wd-fg-primary">
+            우리 라인 이웃으로 시작해요
+          </h2>
+          <p className="mt-1.5 text-[13px] text-wd-fg-tertiary">
+            같은 동·라인 이웃에게만 글이 보여요.
+          </p>
         </div>
 
-        <Field label="전화번호" htmlFor="phone" error={errors.phone?.message}>
-          <input
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="010-1234-5678"
-            className="h-11 rounded-lnb-sm border border-border bg-card px-3 outline-none focus:border-primary"
-            {...register('phone')}
-          />
-        </Field>
+        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+          {formError ? (
+            <div
+              role="alert"
+              className="rounded-[10px] border border-wd-negative/30 bg-wd-negative-soft px-3 py-2 text-[13px] text-wd-negative"
+            >
+              {formError}
+            </div>
+          ) : null}
 
-        <p className="text-xs text-sub">
-          전화번호는 거래가 성사된 이웃에게만 공개돼요.
+          <Field label="아이디" htmlFor="username" error={errors.username?.message}>
+            <input
+              id="username"
+              type="text"
+              autoComplete="username"
+              placeholder="3자 이상"
+              className={INPUT_CLS}
+              {...register('username')}
+            />
+          </Field>
+
+          <Field label="비밀번호" htmlFor="password" error={errors.password?.message}>
+            <input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              placeholder="6자 이상"
+              className={INPUT_CLS}
+              {...register('password')}
+            />
+          </Field>
+
+          <Field
+            label="비밀번호 확인"
+            htmlFor="passwordConfirm"
+            error={errors.passwordConfirm?.message}
+          >
+            <input
+              id="passwordConfirm"
+              type="password"
+              autoComplete="new-password"
+              className={INPUT_CLS}
+              {...register('passwordConfirm')}
+            />
+          </Field>
+
+          <Field label="이름" htmlFor="name" error={errors.name?.message}>
+            <input
+              id="name"
+              type="text"
+              autoComplete="name"
+              placeholder="예: 홍길동"
+              className={INPUT_CLS}
+              {...register('name')}
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="동" htmlFor="dong" error={errors.dong?.message}>
+              <input
+                id="dong"
+                type="text"
+                placeholder="101동"
+                className={INPUT_CLS}
+                {...register('dong')}
+              />
+            </Field>
+            <Field label="호수" htmlFor="unit" error={errors.unit?.message}>
+              <input
+                id="unit"
+                type="text"
+                placeholder="101호"
+                className={INPUT_CLS}
+                {...register('unit')}
+              />
+            </Field>
+          </div>
+
+          <Field label="전화번호" htmlFor="phone" error={errors.phone?.message}>
+            <input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="010-1234-5678"
+              className={INPUT_CLS}
+              {...register('phone')}
+            />
+            <span className="text-[11px] text-wd-fg-tertiary">
+              거래가 성사된 이웃에게만 공개됩니다.
+            </span>
+          </Field>
+
+          <button
+            type="submit"
+            disabled={signup.isPending}
+            className="mt-2 inline-flex h-12 items-center justify-center rounded-xl bg-wd-primary px-5 text-[15px] font-bold text-white transition-colors hover:bg-wd-primary-hover active:scale-[0.98] disabled:opacity-50"
+          >
+            {signup.isPending ? '가입 중…' : '가입하기'}
+          </button>
+        </form>
+
+        <p className="text-center text-[13px] text-wd-fg-tertiary">
+          이미 계정이 있나요?{' '}
+          <Link to="/login" className="font-bold text-wd-primary">
+            로그인
+          </Link>
         </p>
-
-        <button
-          type="submit"
-          disabled={signup.isPending}
-          className="mt-2 h-12 rounded-lnb bg-primary font-bold text-white shadow-lnb-sm transition-colors hover:bg-primary-dark disabled:opacity-60"
-        >
-          {signup.isPending ? '가입 중…' : '가입하기'}
-        </button>
-      </form>
-
-      <p className="text-center text-sm text-sub">
-        이미 계정이 있나요?{' '}
-        <Link to="/login" className="font-bold text-primary">
-          로그인
-        </Link>
-      </p>
+      </div>
     </div>
   );
 }
@@ -235,12 +248,14 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={htmlFor} className="text-sm font-bold text-text">
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-[13px] font-bold text-wd-fg-primary">
         {label}
       </label>
       {children}
-      {error ? <span className="text-xs text-accent">{error}</span> : null}
+      {error ? (
+        <span className="text-[12px] text-wd-negative">{error}</span>
+      ) : null}
     </div>
   );
 }
