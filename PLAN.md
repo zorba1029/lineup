@@ -1,8 +1,23 @@
-# 라인이웃(옆집마켓) – 개발 플랜 v1.2
+# 라인이웃(옆집마켓) – 개발 플랜 v1.3
 
 > 같은 아파트 동(棟)·라인(예: 01라인 = 101·201·301·401·501호) 이웃 간 즉시 물품 대여 매칭 모바일 웹 서비스.
 > Source: `ideation/hn_sharing/neighbor-borrow-service.md`(기획서) + `ideation/hn_sharing/neighbor-borrow-app.html`(작동하는 프로토타입, 1,312줄).
 > 화면 mockup: Cowork artifact `linenb-screen-mockups` (12개 화면, 5개 섹션).
+> **디자인 시스템**: Wanted Design System (semantic 토큰 + Pretendard) — 자세한 사항은 `docs/ui-update.md` 참조.
+>
+> **v1.3 변경점** (UI 디자이너 시안 기반 Wanted Design System 전면 도입):
+> - **디자인 토큰**: `--wd-*` semantic 토큰 (fg / bg / color-{primary,positive,negative,cautionary,informative,accent} / border) — `src/styles/index.css :root` 정의, Tailwind `colors.wd.*` namespace로 노출.
+> - **폰트**: Pretendard Variable (KR/Latin, CDN dynamic subset). `font-display`는 Wanted Sans → Pretendard fallback.
+> - **신규 화면 요소**:
+>   - §1.A 로그인: 44×44 brand mark + "오늘의 라인이웃" 카드(6세대 안내, sparkles 아이콘) + 하단 전화번호 정책 카드.
+>   - §1.A 회원가입: **DetailHeader 패턴** (sticky 56px + 뒤로 가기 + 17px 타이틀) — 신규 공통 컴포넌트.
+>   - §1.B 메인 헤더: 좌측 brand-dot + 우측 사용자 정보 **2단**(동·호수 / 이름·"같은 라인 6세대").
+>   - §1.B PostCard: 좌측 4px status bar + open 상태 dot **ring-pulse** + 응답 카운트 pill + 남은 시간 chip (1h 미만 시 cautionary 강조).
+>   - §1.C RequestDetail: **HeroBlock**(status + eyebrow + 22px display 이름 + meta chip row) + Section/Row 패턴.
+>   - §1.E OfferRegistered / Matched: DetailHeader + 큰 success mark 원형(primary-soft / positive) + Section.
+> - **신규 컴포넌트**: `components/layout/DetailHeader.tsx` (회원가입·상세·등록완료·매칭 화면 공통).
+> - **카테고리 chip 단일 톤**: `lib/categories.ts`의 `CATEGORY_CHIP_CLASS` 제거. 카테고리 chip 스타일은 사용처에 인라인 (`bg-wd-primary-soft text-wd-primary`).
+> - **legacy 색상 제거**: 기존 단일 톤 `primary/accent/green/yellow/bg/card/text/sub/border` + `borderRadius.lnb*` + `boxShadow.lnb*` + `blink-soft` keyframe 모두 제거.
 >
 > **v1.2 변경점** (M6 + post-M6 폴리시 후 사용자·기획자 결정 반영):
 > - §1.B 메인 필터: 「독립 토글 칩 2개」 → 「**3-tab segmented control** (전체 / 내 글 보기 / 내가 빌려준 글)」, 상호 배타적.

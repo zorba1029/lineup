@@ -170,10 +170,11 @@
 - 시간 포맷 (`lib/time.ts`) — 그대로
 - 타입 (`lib/types.ts`) — 그대로
 
-## 6. 남은 작업
+## 6. 진행 상황
 
-- **머지 + 배포**: 1~9단계 완료. 사용자 시각 검증 후 main 머지 (`--no-ff`, branch 보존) → `./deploy-frontend.sh`
-- (선택) PLAN.md를 v1.3으로 갱신해서 디자인 시스템 도입을 공식 반영
+- ✅ 1~9단계 main 머지 (`55287e3`) + frontend 재배포 완료
+- ✅ PLAN.md v1.3 갱신 (디자인 시스템 도입 공식 반영)
+- ✅ feat/ui-update branch 보존
 
 ## 7. 정리 (완료 — Step 9에 통합)
 
