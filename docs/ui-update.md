@@ -121,6 +121,21 @@
 - **MyOfferModal**: 4-cell info grid + 수정·취소 lu-btn
 - **ConfirmModal**: 중앙 카드 rounded-2xl + h-11 secondary/primary
 
+### Step 8 — OfferRegisteredPage / MatchedPage
+
+- **OfferRegisteredPage**:
+  - DetailHeader "등록 완료" 추가 (← 메인으로)
+  - 이모지 📦 → **64×64 wd-primary-soft 원형 + wd-primary check SVG**
+  - 22px display "빌려주기 응답을 보냈어요" + "거래가 성사돼야 전화번호가 공개" 정책 강조
+  - 응답 정보 Section (Row x 5: 물건 + 시간/장소)
+  - "메인으로" 버튼 (wd-primary, h-12, rounded-xl)
+- **MatchedPage**:
+  - DetailHeader "거래 성사" 추가
+  - 이모지 🎉 → **72×72 wd-positive 원형 + 흰 check SVG + positive 30% 그림자**
+  - 22px display "거래가 성사되었어요!" + sub-title
+  - Section: 물건 / 상대방 이웃(phone icon inline) / 시간·장소
+  - **"내 정보" Section 제거** — 새 디자인은 상대방 정보만 노출 (본인 정보는 본인이 아니까)
+
 ## 4. 신규 컴포넌트
 
 | 파일 | 역할 |
@@ -138,10 +153,8 @@
 
 ## 6. 남은 작업
 
-- **Step 8** (대기): `OfferRegisteredPage` (응답 등록 완료) / `MatchedPage` (거래 성사)
-  - 두 페이지 모두 `MatchedScreen` / `OfferRegisteredScreen` (Wanted prototype `f980708b.jsx`) 톤으로 교체
-  - `lu-matched-hero` (success mark + 큰 메시지) + Section/Row 통합
-- **머지 + 배포**: 8단계 완료 후 main 머지 → `./deploy-frontend.sh`
+- **머지 + 배포**: 1~8단계 완료. 사용자 시각 검증 후 main 머지 (`--no-ff`, branch 보존) → `./deploy-frontend.sh`
+- (선택) PLAN.md를 v1.3으로 갱신해서 디자인 시스템 도입을 공식 반영
 
 ## 7. 정리 (마이그레이션 완료 후 권장 작업)
 
