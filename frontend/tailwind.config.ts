@@ -118,11 +118,17 @@ export default {
           '0%, 100%': { opacity: '1' },
           '50%':      { opacity: '0.35' },
         },
+        // Wanted DS — NewPostBanner dot ring expansion (흰 ring)
+        'wd-newpost-pulse': {
+          '0%':   { boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.50)' },
+          '100%': { boxShadow: '0 0 0 8px rgba(255, 255, 255, 0)' },
+        },
       },
       animation: {
-        'blink-soft': 'blink-soft 1.4s steps(1, end) infinite',
-        'wd-pulse':   'wd-pulse 1.8s ease-out infinite',
-        'wd-blink':   'wd-blink 1.4s ease-in-out infinite',
+        'blink-soft':       'blink-soft 1.4s steps(1, end) infinite',
+        'wd-pulse':         'wd-pulse 1.8s ease-out infinite',
+        'wd-blink':         'wd-blink 1.4s ease-in-out infinite',
+        'wd-newpost-pulse': 'wd-newpost-pulse 1.6s ease-out infinite',
       },
     },
   },
