@@ -63,11 +63,11 @@ export function MainPage() {
         <FilterTabs mode={filter} onChange={setFilter} count={items.length} />
 
         {requestsQuery.isLoading ? (
-          <div className="rounded-lnb bg-card py-12 text-center text-sm text-sub shadow-lnb-sm">
+          <div className="rounded-2xl border border-wd-border-default bg-wd-bg-primary py-12 text-center text-[13px] text-wd-fg-tertiary">
             불러오는 중…
           </div>
         ) : requestsQuery.error instanceof ApiError ? (
-          <div className="rounded-lnb-sm border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+          <div className="rounded-lg border border-wd-negative/30 bg-wd-negative-soft px-3 py-2 text-[13px] text-wd-negative">
             게시글을 불러오지 못했어요. 잠시 후 다시 시도해주세요.
           </div>
         ) : (

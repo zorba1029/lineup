@@ -1,33 +1,16 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * 프로토타입(`ideation/hn_sharing/neighbor-borrow-app.html`)의 디자인 토큰을 그대로 옮김.
- * mockup artifact `linenb-screen-mockups`와 동일.
+ * Wanted Design System 도입(feat/ui-update) 이후 색상은 모두 `wd-*` semantic
+ * 토큰을 통해 사용. CSS variables(`--wd-*`)는 `src/styles/index.css` :root에 정의.
+ * legacy 단일 톤(`primary/accent/green/...`)은 마이그레이션 완료 후 제거됨.
  */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        /* 기존 단일 톤(legacy) — 점진 마이그레이션 동안 유지. 새 컴포넌트는 wd-* 사용 권장. */
-        primary: {
-          DEFAULT: '#5B6EF7',
-          light: '#EEF0FF',
-          dark: '#4354D9',
-        },
-        accent: '#FF6B6B',
-        green: {
-          DEFAULT: '#26C281',
-          light: '#E8FAF2',
-        },
-        yellow: '#FFB74D',
-        bg: '#F4F6FB',
-        card: '#FFFFFF',
-        text: '#1E2340',
-        sub: '#7B849C',
-        border: '#E6E9F4',
-
-        /* Wanted Design System — semantic 토큰 (index.css의 :root에서 정의) */
+        /* Wanted Design System — semantic 토큰 (index.css :root에서 정의) */
         wd: {
           /* Foreground */
           'fg-primary':    'var(--wd-fg-primary)',
@@ -90,47 +73,33 @@ export default {
           'sans-serif',
         ],
       },
-      borderRadius: {
-        lnb: '16px',
-        'lnb-sm': '10px',
-      },
       maxWidth: {
         mobile: '480px',
       },
-      boxShadow: {
-        lnb: '0 4px 20px rgba(91,110,247,0.10)',
-        'lnb-sm': '0 2px 8px rgba(0,0,0,0.07)',
-      },
       keyframes: {
-        // legacy — 다른 곳에서 안 쓰면 추후 제거.
-        'blink-soft': {
-          '0%, 49%': { opacity: '1' },
-          '50%, 100%': { opacity: '0.3' },
-        },
-        // Wanted DS — open status pulse (ring expansion via box-shadow)
+        // open status dot pulse (ring expansion via box-shadow)
         'wd-pulse': {
           '0%':   { boxShadow: '0 0 0 0 rgba(0, 102, 255, 0.45)' },
           '70%':  { boxShadow: '0 0 0 8px rgba(0, 102, 255, 0)' },
           '100%': { boxShadow: '0 0 0 0 rgba(0, 102, 255, 0)' },
         },
-        // Wanted DS — urgent dot fade blink
+        // urgent dot fade blink
         'wd-blink': {
           '0%, 100%': { opacity: '1' },
           '50%':      { opacity: '0.35' },
         },
-        // Wanted DS — NewPostBanner dot ring expansion (흰 ring)
+        // NewPostBanner dot ring (흰)
         'wd-newpost-pulse': {
           '0%':   { boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.50)' },
           '100%': { boxShadow: '0 0 0 8px rgba(255, 255, 255, 0)' },
         },
-        // Wanted DS — bottom sheet slide-up entry
+        // bottom sheet slide-up entry
         'wd-slide-up': {
           from: { transform: 'translateY(40px)', opacity: '0' },
           to:   { transform: 'translateY(0)',    opacity: '1' },
         },
       },
       animation: {
-        'blink-soft':       'blink-soft 1.4s steps(1, end) infinite',
         'wd-pulse':         'wd-pulse 1.8s ease-out infinite',
         'wd-blink':         'wd-blink 1.4s ease-in-out infinite',
         'wd-newpost-pulse': 'wd-newpost-pulse 1.6s ease-out infinite',

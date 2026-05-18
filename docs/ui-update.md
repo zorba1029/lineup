@@ -121,7 +121,7 @@
 - **MyOfferModal**: 4-cell info grid + 수정·취소 lu-btn
 - **ConfirmModal**: 중앙 카드 rounded-2xl + h-11 secondary/primary
 
-### Step 8 — OfferRegisteredPage / MatchedPage
+### Step 8 — OfferRegisteredPage / MatchedPage (`5f80937`)
 
 - **OfferRegisteredPage**:
   - DetailHeader "등록 완료" 추가 (← 메인으로)
@@ -135,6 +135,25 @@
   - 22px display "거래가 성사되었어요!" + sub-title
   - Section: 물건 / 상대방 이웃(phone icon inline) / 시간·장소
   - **"내 정보" Section 제거** — 새 디자인은 상대방 정보만 노출 (본인 정보는 본인이 아니까)
+
+### Step 9 — 잔여 마이그레이션 + legacy 정리
+
+빠진 화면 wd 톤 마이그레이션:
+- **PostList**: empty state — rounded-lnb/bg-card/shadow-lnb-sm → rounded-2xl + border + bg-wd-bg-primary
+- **MobileShell**: bg-bg → bg-wd-bg-secondary (양쪽 다)
+- **MainPage**: loading/error 박스 → wd 토큰 (negative-soft 등)
+- **NotFoundPage**: text-sub/text-primary → wd 토큰
+- **CountdownTimer**: 주석의 `text-accent` 안내를 `text-wd-cautionary`로 갱신
+
+코드 cleanup:
+- `lib/categories.ts`: `CATEGORY_CHIP_CLASS` 제거 (사용처 0, 카테고리 chip 스타일은 PostCard 등에 인라인)
+- `tailwind.config.ts`: legacy 색상(`primary/accent/green/yellow/bg/card/text/sub/border`), `borderRadius.lnb*`, `boxShadow.lnb*`, `blink-soft` keyframe/animation 모두 제거
+- `frontend/src/lib/auth.ts`: import 검증 결과 정상 사용 — 추가 정리 X
+
+검증:
+- `pnpm typecheck` ✅
+- `pnpm build` ✅ (152 modules, 정상 산출)
+- legacy 토큰 잔여 0 (정밀 grep 검증)
 
 ## 4. 신규 컴포넌트
 
@@ -153,15 +172,13 @@
 
 ## 6. 남은 작업
 
-- **머지 + 배포**: 1~8단계 완료. 사용자 시각 검증 후 main 머지 (`--no-ff`, branch 보존) → `./deploy-frontend.sh`
+- **머지 + 배포**: 1~9단계 완료. 사용자 시각 검증 후 main 머지 (`--no-ff`, branch 보존) → `./deploy-frontend.sh`
 - (선택) PLAN.md를 v1.3으로 갱신해서 디자인 시스템 도입을 공식 반영
 
-## 7. 정리 (마이그레이션 완료 후 권장 작업)
+## 7. 정리 (완료 — Step 9에 통합)
 
-- `tailwind.config.ts`의 legacy 색상(`primary/accent/green/bg/card/text/sub/border`) 제거
-- `lib/categories.ts`의 `CATEGORY_CHIP_CLASS` 사용처 grep 후 제거
-- `blink-soft` keyframe/animation 제거 (사용 안 함)
-- `frontend/src/lib/auth.ts`의 import 정리 (사용 안 하는 게 있으면)
+마이그레이션 완료 후 권장 작업이었으나 Step 9에서 한꺼번에 처리됨.
+자세한 내용은 위 § 3 Step 9 참고.
 
 ## 8. 참고 자료
 
