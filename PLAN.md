@@ -18,6 +18,8 @@
 > - **신규 컴포넌트**: `components/layout/DetailHeader.tsx` (회원가입·상세·등록완료·매칭 화면 공통).
 > - **카테고리 chip 단일 톤**: `lib/categories.ts`의 `CATEGORY_CHIP_CLASS` 제거. 카테고리 chip 스타일은 사용처에 인라인 (`bg-wd-primary-soft text-wd-primary`).
 > - **legacy 색상 제거**: 기존 단일 톤 `primary/accent/green/yellow/bg/card/text/sub/border` + `borderRadius.lnb*` + `boxShadow.lnb*` + `blink-soft` keyframe 모두 제거.
+> - **§6 sync**: 라이브러리(6.1)·디렉토리(6.2)·컴포넌트 매핑(6.3)·전역 레이아웃(6.4)을 실제 구현과 일치하도록 갱신.
+> - **§9 마일스톤**: M6 실측 반영(seed 멱등 / `#[sqlx::test]` 12건 / `build_app()`), **M7. UI 업데이트** 마일스톤 신규.
 >
 > **v1.2 변경점** (M6 + post-M6 폴리시 후 사용자·기획자 결정 반영):
 > - §1.B 메인 필터: 「독립 토글 칩 2개」 → 「**3-tab segmented control** (전체 / 내 글 보기 / 내가 빌려준 글)」, 상호 배타적.
@@ -293,74 +295,82 @@ CREATE TABLE offers (
 
 ### 6.1 라이브러리 선택
 - **Vite + React 18 + TypeScript** (개발 속도, 빌드 결과물 작음)
-- **Tailwind CSS** ─ 프로토타입의 디자인 토큰(`--primary: #5B6EF7` 등)을 `tailwind.config.ts`의 `theme.extend.colors`로 그대로 옮김.
+- **Tailwind CSS** + **Wanted Design System** ─ `--wd-*` semantic 토큰(fg/bg/color/border)을 `src/styles/index.css :root`에 정의, Tailwind `colors.wd.*` namespace로 노출. **Pretendard Variable** 폰트(CDN dynamic subset). 자세한 사항은 `docs/ui-update.md` 참조.
 - **React Router v6** ─ 7개 라우트(`/login`, `/signup`, `/`, `/requests/:id`, `/offers/registered`, `/matched`, 404).
 - **TanStack Query (React Query)** ─ 서버 상태 캐시 + 5초 polling (`refetchInterval: 5_000`)으로 새 글/offer 자동 갱신.
 - **Zustand** ─ 인증 토큰, 현재 사용자, 모달 표시 등 클라이언트 상태.
-- **react-hook-form + zod** ─ 로그인/회원가입/요청 모달 폼 검증.
-- **dayjs (또는 date-fns)** ─ "방금 전/N분 전" 포맷, 72h 카운트다운.
+- **react-hook-form + 자체 zod resolver** ─ 로그인/회원가입/요청·offer 모달 폼 검증 (`lib/validation.ts`).
+- 시간 포맷 ─ 자체 헬퍼(`lib/time.ts`): `formatRelative`, `formatRemaining` (외부 dayjs/date-fns 의존성 회피).
 
 ### 6.2 디렉토리
+
+> 실제 구현 결과의 정확한 트리는 `CLAUDE.md` § 4 참조. 아래는 계획 단계 청사진.
 
 ```
 impl/frontend/
 ├── index.html
 ├── vite.config.ts
-├── tailwind.config.ts
+├── tailwind.config.ts                # Wanted DS colors.wd.* namespace + wd-* animations
 ├── tsconfig.json
 ├── package.json
 └── src/
     ├── main.tsx
     ├── App.tsx                       # Router + QueryClientProvider
+    ├── vite-env.d.ts                 # import.meta.env (VITE_API_BASE 등)
     ├── lib/
     │   ├── api.ts                    # fetch 래퍼, JWT 자동 주입, 401 → refresh
     │   ├── auth.ts                   # 토큰 저장(localStorage), Zustand 스토어
-    │   ├── time.ts                   # formatRelativeTime, formatCountdown
-    │   └── queryKeys.ts
-    ├── routes/
-    │   ├── LoginPage.tsx
-    │   ├── SignupPage.tsx
-    │   ├── MainPage.tsx              # screen-main
-    │   ├── RequestDetailPage.tsx     # 작성자/이웃 뷰 분기
-    │   ├── OfferRegisteredPage.tsx
-    │   ├── MatchedPage.tsx
-    │   └── NotFoundPage.tsx
+    │   ├── time.ts                   # formatRelative, formatRemaining
+    │   ├── queryKeys.ts
+    │   ├── categories.ts             # CATEGORIES enum + Category type
+    │   ├── confirm.ts                # 전역 confirm slot (Zustand)
+    │   ├── lastSeen.ts               # NewPostBanner용 localStorage
+    │   ├── nudgePool.ts              # 정적 추천 풀 12건
+    │   ├── types.ts                  # User, RequestPublic, OfferPublic, ...
+    │   └── validation.ts             # 자체 zodResolver (외부 dep 회피)
+    ├── routes/                       # LoginPage / SignupPage / MainPage /
+    │   │                             # RequestDetailPage / OfferRegisteredPage /
+    │   │                             # MatchedPage / NotFoundPage
     ├── features/
-    │   ├── auth/                     # useLogin, useSignup, useMe
-    │   ├── requests/                 # useRequests, useRequest, useCreateRequest, ...
-    │   └── offers/                   # useCreateOffer, useAcceptOffer, ...
+    │   ├── auth/                     # useLogin, useSignup, useMe, useLogout
+    │   ├── requests/                 # useRequests, useRequest, useCreate/Update/Delete
+    │   └── offers/                   # useCreate/Update/Delete, useAccept, useReject
     ├── components/
-    │   ├── layout/                   # MobileShell (max-w-[480px] 중앙정렬)
-    │   ├── post/                     # PostCard, PostList, FilterChips
+    │   ├── auth/RequireAuth.tsx
+    │   ├── layout/
+    │   │   ├── MobileShell.tsx       # max-w-mobile(480px) 중앙정렬
+    │   │   ├── Header.tsx            # brand-dot + user info 2단
+    │   │   └── DetailHeader.tsx      # sticky 56px + back + 17px title  [Wanted DS]
+    │   ├── post/                     # PostCard, PostList, FilterTabs, Fab, StatusBadge
     │   ├── nudge/                    # NudgeBanner, NewPostBanner
     │   ├── modals/                   # RequestModal, ConfirmModal, MyOfferModal
     │   ├── sheets/                   # OfferBottomSheet (2-step)
-    │   ├── timer/                    # CountdownTimer
-    │   └── ui/                       # Button, Chip, Toggle, InputGroup
+    │   └── timer/                    # CountdownTimer
     └── styles/
-        └── index.css                 # @tailwind base/components/utilities + 전역 토큰
+        └── index.css                 # @import Pretendard + @tailwind + :root --wd-*
 ```
 
 ### 6.3 컴포넌트-기능 매핑 (mockup 번호 → 프로토타입 → React)
 
 | # | 프로토타입 | React 컴포넌트 |
 |---|---|---|
-| 01 | `renderLogin()` | `LoginPage` + `<InputGroup>`, `<Button>` |
-| 02 | *(신규)* | `SignupPage` + react-hook-form + zod 검증, 가입 성공 시 자동 로그인 |
-| 03 | `renderMain()` | `MainPage` + `<Header>`, `<NewPostBanner>`, `<NudgeBanner>`, `<FilterChips>`, `<PostList>`, `<PostCard>`, `<Fab>` |
-| 04 | `renderRequestModal()` | `<RequestModal>` (Dialog) |
-| 05 | `renderDetailOwner()` | `<OwnerDetailView>` ─ 게시글 설정 폼, `<OfferList>`, `<DetailFooter>`, `<CountdownTimer>` |
-| 06 | `renderDetailNeighbor()` | `<NeighborDetailView>` ─ 정보 카드, `<DetailFooter>`, `<CountdownTimer>` |
-| 07 | `renderOfferSheet()` step 1 | `<OfferBottomSheet step=1>` (대여/반납 시간 프리셋) |
-| 08 | `renderOfferSheet()` step 2 | `<OfferBottomSheet step=2>` (장소 입력, 신규/수정 동일 UI) |
-| 09 | `renderMyOfferModal()` | `<MyOfferModal>` ─ 내 active offer 확인/수정/취소 |
-| 10 | `renderOfferRegistered()` | `OfferRegisteredPage` |
+| 01 | `renderLogin()` | `LoginPage` ─ 44×44 brand mark + "오늘의 라인이웃" 카드 + 하단 정책 카드 |
+| 02 | *(신규)* | `SignupPage` ─ `<DetailHeader>` + react-hook-form + 자체 zod resolver, 가입 성공 시 자동 로그인 |
+| 03 | `renderMain()` | `MainPage` + `<Header>`(brand-dot+2단), `<NewPostBanner>`, `<NudgeBanner>`, `<FilterTabs>`(3-tab), `<PostList>`, `<PostCard>`(status bar+pulse), `<Fab>` |
+| 04 | `renderRequestModal()` | `<RequestModal>` (bottom sheet, 카테고리 3-column grid + 급해요 toggle box) |
+| 05 | `renderDetailOwner()` | `<OwnerView>`(RequestDetailPage 내부) ─ `<DetailHeader>` + `<HeroBlock>` + 인플레이스 설명 편집 + `<OwnerOfferCard>`(4-cell grid) |
+| 06 | `renderDetailNeighbor()` | `<NeighborView>`(RequestDetailPage 내부) ─ `<HeroBlock>` + 요청자 Section + "내 빌려주기 응답" 카드 + 단계별 액션 |
+| 07 | `renderOfferSheet()` step 1 | `<OfferBottomSheet step=1>` ─ 시간 preset chip(rounded-full) + 직접 입력 |
+| 08 | `renderOfferSheet()` step 2 | `<OfferBottomSheet step=2>` ─ 장소 입력, 신규/수정 동일 UI |
+| 09 | `renderMyOfferModal()` | `<MyOfferModal>` ─ 내 active offer 확인/수정/취소 (4-cell grid) |
+| 10 | `renderOfferRegistered()` | `OfferRegisteredPage` ─ `<DetailHeader>` + 64×64 primary-soft 원형 + check |
 | 11 | `renderConfirmModal()` | `<ConfirmModal>` + 전역 `useConfirm()` 훅 (Zustand `{ message, onConfirm }` 단일 슬롯) |
-| 12 | `renderMatched()` | `MatchedPage` |
-| — | `showSnackbar/showToast` | `<ToastProvider>` (sonner 또는 자체) |
+| 12 | `renderMatched()` | `MatchedPage` ─ `<DetailHeader>` + 72×72 positive 원형 + check + Section |
+| — | 공통 status | `<StatusBadge>` ─ open/matched/expired/cancelled, dot + 라벨, wd 토큰 |
+| — | 공통 헤더 | `<DetailHeader>` ─ sticky 56px + 둥근 back + 17px title (회원가입·상세·등록완료·매칭) |
 
 ### 6.4 전역 레이아웃
-프로토타입 `#app { max-width:480px; margin:auto }` 그대로. `<MobileShell>` 컴포넌트가 모든 라우트를 감싸 `min-h-screen`, `max-w-[480px]`, 흰 배경 카드 모양 유지.
+프로토타입 `#app { max-width:480px; margin:auto }` 그대로. `<MobileShell>`이 모든 라우트를 감싸 `min-h-dvh`, `max-w-mobile`(480px), 안쪽은 `bg-wd-bg-secondary` — 안쪽 흰 카드(`bg-wd-bg-primary`)가 자연스럽게 떠 보이도록.
 
 ---
 
@@ -518,13 +528,21 @@ VITE_POLL_INTERVAL_MS=5000
 - `<NewPostBanner>` ─ "마지막으로 본 시각" localStorage + GET `/requests?since=...`.
 - `<NudgeBanner>` ─ 카테고리/이웃별 추천 1건 (정적 풀 또는 가장 최근 open request).
 
-### M6. 마감 (2일)
-- 폼 검증 메시지, 에러 토스트, 빈 상태 그래픽, 접근성 라벨.
-- 시드 데이터 (sqlx migration 또는 `cargo run --bin seed`).
-- 운영용 Dockerfile (frontend → nginx static, backend → distroless), GitHub Actions CI(빌드+sqlx prepare).
+### M6. 마감 (실 진행: 2일)
+- 폼 검증 메시지, 에러 처리, 빈 상태 메시지, 접근성 라벨.
+- 시드 데이터 ─ `cargo run --bin seed` (멱등, `--reset` 옵션, 4 users / 5 requests / 2 offers).
+- 통합 테스트 ─ `#[sqlx::test]` 12건 (auth / requests / offers — accept 동시성 포함).
+- `src/lib.rs` + `pub fn build_app()`로 바이너리/테스트 공유.
 - README 정리.
 
-총 예상 11~16 영업일 (1인 기준). 두 명이면 FE/BE 분리해서 8~10일.
+### M7. UI 업데이트 — Wanted Design System 도입 (실 진행: 1~2일)
+UI 디자이너 시안(`~/Downloads/lineup-mobile.html`)을 9단계로 점진 흡수. 자세한 사항은 `docs/ui-update.md` 참조.
+- **토큰/폰트**: `--wd-*` semantic 토큰 + Pretendard Variable / `font-display`(Wanted Sans → Pretendard fallback).
+- **애니메이션**: `wd-pulse`(open status ring 확장), `wd-blink`(급해요 dot), `wd-newpost-pulse`, `wd-slide-up`(bottom sheet).
+- **컴포넌트 단계 교체**: Header → PostCard/CountdownTimer → FilterTabs/Banner/Fab → LoginPage/SignupPage + 신규 `<DetailHeader>` → RequestDetailPage(+`<HeroBlock>`)/StatusBadge → Sheet/Modal 4종 → OfferRegistered/Matched + 잔여 화면 + legacy cleanup.
+- **legacy 정리**: 단일 톤 색상 / `borderRadius.lnb*` / `boxShadow.lnb*` / `blink-soft` / `CATEGORY_CHIP_CLASS` 제거.
+
+총 예상 12~18 영업일 (1인 기준, M7 포함). 두 명이면 FE/BE 분리해서 9~12일.
 
 ---
 
